@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 
+test_project
+
 # C extensions
 *.so
 
