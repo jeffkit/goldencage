@@ -107,7 +107,10 @@ class AppWallLog(models.Model):
             else:
                 value = data[value]
             if key in ('user_id', 'cost'):
-                value = int(value)
+                try:
+                    value = int(value)
+                except:
+                    return True
             setattr(alog, key, value)
         alog.extra_data = data
         try:

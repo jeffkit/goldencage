@@ -9,6 +9,7 @@ from django.core.cache import cache
 
 import hashlib
 import requests
+import simplejson as json
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
@@ -32,9 +33,11 @@ def waps_callback(request):
     for key in request.GET.keys():
         wapslog[key] = request.GET[key]
     if AppWallLog.log(wapslog, provider='waps'):
-        return HttpResponse("OK")
+        return HttpResponse(json.dumps(
+            {"message": u"成功接收", "success": True}))
     else:
-        return HttpResponseForbidden('already exists')
+        return HttpResponse(json.dumps(
+            {"message": u"无效数据", "success": False}))
 
 
 def youmi_callback_ios(request):
