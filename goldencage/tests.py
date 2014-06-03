@@ -11,6 +11,7 @@ from django.contrib.auth.models import User
 import hashlib
 import time
 from mock import Mock
+import simplejson as json
 
 from goldencage import views
 from goldencage import config
@@ -77,8 +78,13 @@ class AppWallCallbackTest(TestCase):
         c = Client()
         rsp = c.get(reverse('wall_cb', args=['waps']), data)
         self.assertEqual(rsp.status_code, 200)
+        dt = json.loads(rsp.content)
+        self.assertTrue(dt['success'])
+
         rsp = c.get(reverse('wall_cb', args=['waps']), data)
-        self.assertEqual(rsp.status_code, 403)
+        self.assertEqual(rsp.status_code, 200)
+        dt = json.loads(rsp.content)
+        self.assertFalse(dt['success'])
 
     def test_waps_callback_invalid_ip(self):
         c = Client(REMOTE_ADDR='192.168.0.1')
@@ -284,5 +290,33 @@ class AlipayCallbackTest(TestCase):
         self.assertEqual(1, cache.set.call_count)
         self.assertEqual(0, payment_done.send.call_count)
 
-    def test_alipay_wait_for_pay(self):
-        pass
+    def test_signature(self):
+        sign = ("C5hIr/2XQM6eC4JE2bpKGXVHXQXyALYOMcVUQ7W2mjXVm0MggzEAxJGH"
+                "MYMqPMdh+M9QVU9tNw2kfUn5qlSHspHgEULtHChNWN+rH+clCYYrERRNA"
+                "m3AXUAawotknhtYDfzJTfpcQWmBqB+RU8YJtpsac+uOtsLc3YaiNvOd+1s=")
+        params = {
+            "seller_email":"randotech@126.com",
+            "subject":u"资肋主题助手",
+            "is_total_fee_adjust":"Y",
+            "gmt_create":"2014-04-19 17:35:11",
+            "out_trade_no":"12",
+            "sign_type":"RSA",
+            "body": u"资助主题助手, 让我们更好的为您服务。",
+            "price":"0.10",
+            "buyer_email":"bbmyth@gmail.com",
+            "discount":"0.00",
+            "trade_status":"WAIT_BUYER_PAY",
+            "trade_no":"2014041956857959",
+            "seller_id":"2088311247579029",
+            "use_coupon":"N",
+            "payment_type":"1",
+            "total_fee":"0.10",
+            "notify_time":"2014-04-19 17:35:11",
+            "quantity":"1",
+            "notify_id":"a1fbf729fd1824686d11bad2d9fa5f1d5a",
+            "notify_type":"trade_status_sync",
+            "buyer_id":"2088002802114592"
+            }
+        print 'views %s' % views.verify_alipay_signature
+        result = views.verify_alipay_signature('RSA', sign, params)
+        self.assertEqual(True, result)
