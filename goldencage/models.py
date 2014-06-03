@@ -81,7 +81,7 @@ class AppWallLog(models.Model):
     provider = models.CharField(max_length=20,
                                 choices=(('youmi_ios', u'有米iOS'),
                                          ('waps', u'万普')))
-    identity = models.CharField(max_length=200)
+    identity = models.CharField(max_length=100)
     cost = models.IntegerField()
     product_id = models.CharField(max_length=100)
     product_name = models.CharField(max_length=100)
