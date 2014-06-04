@@ -163,7 +163,7 @@ class Charge(models.Model):
                              blank=True, null=True)
     value = models.IntegerField(u'充入金额(单位：分)')
     cost = models.IntegerField(u'价值积分')
-    transaction_id = models.CharField(u'平台交易号', max_length=200)
+    transaction_id = models.CharField(u'平台交易号', max_length=100)
     order_id = models.CharField(u'交易号', max_length=100, unique=True)
     create_time = models.DateTimeField(u'交易时间', auto_now_add=True)
     valid = models.BooleanField(u'是否有效', default=True)
