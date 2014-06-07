@@ -150,6 +150,33 @@ class Order(models.Model):
     def __unicode__(self):
         return self.plan.name
 
+    @classmethod
+    def get_real_id(cls, oid):
+        test_id = str(oid)
+        if len(test_id) < 15:
+            return oid
+
+        # 15位，看是不是满足前缀
+        prefix = getattr(settings, 'GOLDENCAGE_ORDER_ID_PREFIX', 0)
+        if not prefix:
+            return oid
+
+        return int(test_id.replace(str(prefix), ''))
+
+    def gen_order_id(self):
+        prefix = getattr(settings, 'GOLDENCAGE_ORDER_ID_PREFIX', 0)
+        if not prefix:
+            return self.id
+        try:
+            prefix = int(prefix)
+        except:
+            return self.id
+
+        prefix = str(prefix)
+        rid = str(self.id)
+        paddings = '0' * (15 - len(prefix) - len(rid))
+        return int(prefix + paddings + rid)
+
     class Meta:
         verbose_name = u'订单'
         verbose_name_plural = u'订单'
@@ -203,7 +230,7 @@ class Charge(models.Model):
             setattr(chg, key, value)
         chg.extra_data = data
 
-        order = Order.objects.get(pk=chg.order_id)
+        order = Order.objects.get(pk=Order.get_real_id(chg.order_id))
         plan = order.plan
         chg.cost = plan.cost
         chg.user = order.user
