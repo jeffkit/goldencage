@@ -29,11 +29,11 @@ from goldencage.models import Order
 class OrderModelTest(TestCase):
 
     def test_get_real_id_without_prefix(self):
-        self.assertEqual(999999999999999, Order.get_real_id(999999999999999))
+        self.assertEqual(999999999, Order.get_real_id(999999999))
 
     @override_settings(GOLDENCAGE_ORDER_ID_PREFIX=9)
     def test_get_real_id_prefix(self):
-        self.assertEqual(123, Order.get_real_id(900000000000123))
+        self.assertEqual(123, Order.get_real_id(900000123))
 
     def test_get_order_id(self):
         order = Order()
@@ -46,7 +46,7 @@ class OrderModelTest(TestCase):
         order = Order()
         order.id = 100
         gid = order.gen_order_id()
-        self.assertEqual(900000000000100, gid)
+        self.assertEqual(900000100, gid)
 
 @skipIfCustomUser
 class TaskModelTest(TestCase):

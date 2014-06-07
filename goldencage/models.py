@@ -153,10 +153,9 @@ class Order(models.Model):
     @classmethod
     def get_real_id(cls, oid):
         test_id = str(oid)
-        if len(test_id) < 15:
+        if len(test_id) < 9:
             return oid
 
-        # 15位，看是不是满足前缀
         prefix = getattr(settings, 'GOLDENCAGE_ORDER_ID_PREFIX', 0)
         if not prefix:
             return oid
@@ -174,7 +173,7 @@ class Order(models.Model):
 
         prefix = str(prefix)
         rid = str(self.id)
-        paddings = '0' * (15 - len(prefix) - len(rid))
+        paddings = '0' * (9 - len(prefix) - len(rid))
         return int(prefix + paddings + rid)
 
     class Meta:
