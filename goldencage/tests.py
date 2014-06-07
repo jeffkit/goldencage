@@ -33,7 +33,7 @@ class OrderModelTest(TestCase):
 
     @override_settings(GOLDENCAGE_ORDER_ID_PREFIX=9)
     def test_get_real_id_prefix(self):
-        self.assertEqual(123, Order.get_real_id(900000123))
+        self.assertEqual(999, Order.get_real_id(900000999))
 
     def test_get_order_id(self):
         order = Order()
@@ -47,6 +47,13 @@ class OrderModelTest(TestCase):
         order.id = 100
         gid = order.gen_order_id()
         self.assertEqual(900000100, gid)
+
+    @override_settings(GOLDENCAGE_ORDER_ID_PREFIX=9)
+    def test_gen_order_id_prefix_repeat(self):
+        order = Order()
+        order.id = 999
+        gid = order.gen_order_id()
+        self.assertEqual(900000999, gid)
 
 @skipIfCustomUser
 class TaskModelTest(TestCase):
