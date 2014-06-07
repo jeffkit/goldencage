@@ -159,8 +159,11 @@ class Order(models.Model):
         prefix = getattr(settings, 'GOLDENCAGE_ORDER_ID_PREFIX', 0)
         if not prefix:
             return oid
-
-        return int(test_id.replace(str(prefix), ''))
+        prefix = str(prefix)
+        if not test_id.startswith(prefix):
+            return old
+        
+        return int(test_id[len(prefix):])
 
     def gen_order_id(self):
         prefix = getattr(settings, 'GOLDENCAGE_ORDER_ID_PREFIX', 0)
