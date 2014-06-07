@@ -10,7 +10,6 @@ import time
 from goldencage import config
 import random
 
-
 task_done = Signal(providing_args=['cost', 'user'])
 appwalllog_done = Signal(providing_args=['cost', 'user'])
 payment_done = Signal(providing_args=['cost', 'user'])
@@ -161,8 +160,8 @@ class Order(models.Model):
             return oid
         prefix = str(prefix)
         if not test_id.startswith(prefix):
-            return old
-        
+            return oid
+
         return int(test_id[len(prefix):])
 
     def gen_order_id(self):
