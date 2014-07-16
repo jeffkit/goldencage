@@ -40,6 +40,33 @@ def waps_callback(request):
             {"message": u"无效数据", "success": False}))
 
 
+def youmi_callback_adr(request):
+    sign = request.GET.get('sig')
+    if not sign:
+        return HttpResponseForbidden("miss param 'sign'")
+
+    keys = ['order', 'app', 'user', 'chn', 'ad', 'points']
+    vals = [request.GET.get(k, '').encode('utf8').decode('utf8') for k in keys]
+    vals.insert(0, settings.YOUMI_CALLBACK_SECRET_ADR)
+    token = u'||'.join(vals)
+    md5 = hashlib.md5()
+    md5.update(token.encode('utf-8'))
+    md5 = md5.hexdigest()
+    _sign = md5[12:20]
+
+    if sign != _sign:
+        return HttpResponseForbidden("signature error")
+    youmilog = {}
+    for key in keys:
+        youmilog[key] = request.GET[key]
+    if AppWallLog.log(youmilog, provider='youmi_adr'):
+        return HttpResponse('OK')
+    else:
+        return HttpResponseForbidden('already exist')
+
+    return HttpResponseForbidden("Signature verification fail")
+
+
 def youmi_callback_ios(request):
     sign = request.GET.get('sign')
     if not sign:
@@ -73,6 +100,7 @@ def youmi_callback_ios(request):
 def appwall_callback(request, provider):
     return {'waps': waps_callback,
             'youmi_ios': youmi_callback_ios,
+            'youmi_adr': youmi_callback_adr,
             }[provider](request)
 
 alipay_public_key = config.ALIPAY_PUB_KEY

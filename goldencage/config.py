@@ -13,6 +13,12 @@ APPWALLLOG_MAPPING = {
                   'user_id': 'user',
                   'product_id': 'adid',
                   'product_name': 'ad'
+                  },
+    'youmi_adr': {'identity': 'order',
+                  'cost': 'points',
+                  'user_id': 'user',
+                  'product_id': 'ad',
+                  'product_name': 'ad',
                   }
     }
 
