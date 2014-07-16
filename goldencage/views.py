@@ -49,7 +49,9 @@ def youmi_callback_adr(request):
     vals = [request.GET.get(k, '').encode('utf8').decode('utf8') for k in keys]
     vals.insert(0, settings.YOUMI_CALLBACK_SECRET_ADR)
     token = u'||'.join(vals)
-    md5 = hashlib.md5().update(token.encode('utf-8')).hexdigest()
+    md5 = hashlib.md5()
+    md5.update(token.encode('utf-8'))
+    md5 = md5.hexdigest()
     _sign = md5[12:20]
 
     if sign != _sign:
