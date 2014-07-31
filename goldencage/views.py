@@ -115,7 +115,11 @@ def verify_notify_id(notify_id):
     params = {'service': 'notify_verify',
               'partner': settings.ALIPAY_PID,
               'notify_id': notify_id}
-    rsp = requests.get(url, params=params)
+    try:
+        rsp = requests.get(url, params=params, timeout=5)
+    except:
+        print 'alipay gateway error or timeout?'
+        return False
     return rsp.status_code == 200 and rsp.text == 'true'
 
 
