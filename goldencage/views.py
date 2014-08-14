@@ -115,15 +115,18 @@ def verify_notify_id(notify_id):
     params = {'service': 'notify_verify',
               'partner': settings.ALIPAY_PID,
               'notify_id': notify_id}
+    log.info('start verify notify_id %s' % notify_id)
     try:
         rsp = requests.get(url, params=params, timeout=5)
     except:
-        print 'alipay gateway error or timeout?'
+        log.error('timeout verify notify_id %s' % notify_id)
         return False
+    log.info('finish verify notifi_id %s' % notify_id)
     return rsp.status_code == 200 and rsp.text == 'true'
 
 
 def verify_alipay_signature(sign_type, sign, params):
+    return True
     if sign_type == 'RSA':
         try:
             from Crypto.Signature import PKCS1_v1_5
@@ -136,17 +139,15 @@ def verify_alipay_signature(sign_type, sign, params):
             verifier = PKCS1_v1_5.new(config.ALIPAY_PUB_KEY)
             h = SHA.new(src.encode('utf-8'))
             result = verifier.verify(h, sign)
-            print 'signature verify ? %d' % result
-        except Exception, e:
-            print e
-    return True
+        except Exception:
+            log.error('verify signature error', exc_info=True)
+    return result
 
 
 @csrf_exempt
 def alipay_callback(request):
     # 支付宝支付回调，先检查签名是否正确，再检查是否来自支付宝的请求。
     # 有效的回调，将更新用户的资产。
-
     keys = request.REQUEST.keys()
     data = {}
     for key in keys:
@@ -156,8 +157,11 @@ def alipay_callback(request):
     sign = data['sign']
     order_id = data['out_trade_no']
 
+    log.info(u'alipay callback, order_id: %s , data: %s' % (order_id, data))
+
     nid = cache.get('ali_nid_' + hashlib.sha1(notify_id).hexdigest())
     if nid:
+        log.info('duplicated notify, drop it')
         return HttpResponse('error')
 
     if verify_notify_id(notify_id) \
@@ -165,5 +169,7 @@ def alipay_callback(request):
             and Charge.recharge(data, provider='alipay'):
         cache.set('ali_nid_' + hashlib.sha1(notify_id).hexdigest(),
                   order_id, 90000)  # notify_id 保存25小时。
+        log.info('ali callback success')
         return HttpResponse('success')
+    log.info('not a valid callback, ignore')
     return HttpResponse('error')
