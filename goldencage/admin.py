@@ -14,18 +14,21 @@ class TaskLogAdmin(admin.ModelAdmin):
     list_display = ['job', 'cost', 'create_time', 'valid']
     list_filter = ('job', 'create_time')
     raw_id_fields = ('user',)
+    list_select_related = False
 
 
 class AppWallLogAdmin(admin.ModelAdmin):
     list_display = ['provider', 'cost', 'product_name', 'create_time', 'valid']
     list_filter = ('provider', 'create_time')
     raw_id_fields = ('user',)
+    list_select_related = False
 
 
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('plan', 'value', 'status', 'create_time')
     list_filter = ('plan', 'create_time', 'status')
     raw_id_fields = ('user',)
+    list_select_related = False
 
 
 class ChargeAdmin(admin.ModelAdmin):
@@ -33,6 +36,7 @@ class ChargeAdmin(admin.ModelAdmin):
                     'create_time', 'status')
     list_filter = ('create_time', 'status')
     raw_id_fields = ('user',)
+    list_select_related = False
 
 
 admin.site.register(Task, admin.ModelAdmin)
