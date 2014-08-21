@@ -79,6 +79,7 @@ class AppWallLog(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL)
     provider = models.CharField(max_length=20,
                                 choices=(('youmi_ios', u'有米iOS'),
+                                         ('youmi_adr', u'有米Android'),
                                          ('waps', u'万普')))
     identity = models.CharField(max_length=100)
     cost = models.IntegerField()
@@ -188,7 +189,7 @@ class Charge(models.Model):
     platform = models.CharField(u'充值平台', max_length=20)
     account = models.CharField(u'充值帐号', max_length=50)
     email = models.CharField(u'充值帐号email', max_length=50,
-                             blank=True, null=True)
+                             blank=True, null=True, db_index=True)
     value = models.IntegerField(u'充入金额(单位：分)')
     cost = models.IntegerField(u'价值积分')
     transaction_id = models.CharField(u'平台交易号', max_length=100)

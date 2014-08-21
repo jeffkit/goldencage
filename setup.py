@@ -15,6 +15,7 @@ setup(name="goldencage",
       url = url,
       long_description=long_description,
       packages=find_packages('.'),
+      zip_safe=False,
      )
 
 
