@@ -12,11 +12,11 @@ goldencage
 
 添加到INSTLLED_APPS：
 
- INSTALLED_APPS = (
-    ...
-    'goldencage',
-    ...
- )
+ 	INSTALLED_APPS = (
+    	...
+    	'goldencage',
+	    ...
+	 )
 
 配置参数
 -------
@@ -35,11 +35,12 @@ GOLDENCAGE_ORDER_ID_PREFIX ,订单前缀，仅支持数字。用于多个应用�
 配置url
 -------
 为支付宝的回调，有米、万普的积份墙回调配置url,goldencage已实现了回调的view，在goldencage.urls模块下面，直接引用即可：
- urlpatterns = patterns(
-    '',
-     url(r'^admin/', include(admin.site.urls)),
-    url(r'^gc/', include('goldencage.urls')),
-  )
+
+ 	urlpatterns = patterns(
+    	'',
+     	url(r'^admin/', include(admin.site.urls)),
+    	url(r'^gc/', include('goldencage.urls')),
+  	)
 
 signal
 ------
