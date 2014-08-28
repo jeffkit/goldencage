@@ -67,8 +67,7 @@ class Task(models.Model):
             if (time.time() - last_time) <= self.interval:
                 return self._save_log(user, False, cost=cost)
         if self.daily:
-            d1 = datetime.now().replace(tzinfo=pytz.utc)\
-                .astimezone(pytz.timezone(settings.TIME_ZONE))
+            d1 = datetime.now()
             d2 = last[0].create_time.replace(tzinfo=pytz.utc)\
                 .astimezone(pytz.timezone(settings.TIME_ZONE))
             log.info('date 1 %s, date 2 %s' % (d1, d2))
