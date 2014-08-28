@@ -7,8 +7,14 @@ from django.dispatch import Signal
 from jsonfield import JSONField
 import calendar
 import time
+from datetime import datetime
 from goldencage import config
 import random
+import pytz
+
+import logging
+log = logging.getLogger(__name__)
+
 
 task_done = Signal(providing_args=['cost', 'user'])
 appwalllog_done = Signal(providing_args=['cost', 'user'])
@@ -22,8 +28,15 @@ class Task(models.Model):
     cost_max = models.IntegerField(
         u'最大金币', default=0,
         help_text=u'如不为0，实际所得为"金币"与"最大金币"之间的随机值')
-    interval = models.IntegerField(default=0)  # 有效间隔时间, 0为不限
-    limit = models.IntegerField(default=0)  # 有效次数，0为不限
+    interval = models.IntegerField(
+        u'时间间隔',
+        default=0,
+        help_text=u'两次任务之间的时间间隔（秒），0为不限')
+    limit = models.IntegerField(
+        u'次数上限',
+        default=0,
+        help_text=u'任务允许执行的最大次数，0为不限',)
+    daily = models.BooleanField(u'允许每天一次', default=False)
 
     def _save_log(self, user, valid=True, cost=None):
         if not cost:
@@ -53,6 +66,14 @@ class Task(models.Model):
             last_time = calendar.timegm(last[0].create_time.timetuple())
             if (time.time() - last_time) <= self.interval:
                 return self._save_log(user, False, cost=cost)
+        if self.daily:
+            d1 = datetime.now()
+            d2 = last[0].create_time.replace(tzinfo=pytz.utc)\
+                .astimezone(pytz.timezone(settings.TIME_ZONE))
+            log.info('date 1 %s, date 2 %s' % (d1, d2))
+            if d1.date() <= d2.date():
+                return self._save_log(user, False, cost=cost)
+
         return self._save_log(user, cost=cost)
 
     def __unicode__(self):
