@@ -12,6 +12,10 @@ from goldencage import config
 import random
 import pytz
 
+import logging
+log = logging.getLogger(__name__)
+
+
 task_done = Signal(providing_args=['cost', 'user'])
 appwalllog_done = Signal(providing_args=['cost', 'user'])
 payment_done = Signal(providing_args=['cost', 'user'])
@@ -67,6 +71,7 @@ class Task(models.Model):
                 .astimezone(pytz.timezone(settings.TIME_ZONE))
             d2 = last[0].create_time.replace(tzinfo=pytz.utc)\
                 .astimezone(pytz.timezone(settings.TIME_ZONE))
+            log.info('date 1 %s, date 2 %s' % (d1, d2))
             if d1.date() <= d2.date():
                 return self._save_log(user, False, cost=cost)
 
