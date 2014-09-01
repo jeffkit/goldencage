@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 
 from django.http import HttpResponseForbidden
 from django.http import HttpResponse
@@ -7,6 +7,11 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA
+
+import base64
 import hashlib
 import requests
 import simplejson as json
@@ -17,6 +22,22 @@ from goldencage import config
 
 import logging
 log = logging.getLogger(__name__)
+
+
+def rsp(data=None):
+    if data is None:
+        data = {}
+    ret = {'errcode': 0, 'errmsg': 'ok', 'data': data}
+    ret = json.dumps(ret)
+    return HttpResponse(ret)
+
+
+def error_rsp(code, msg, data=None):
+    if data is None:
+        data = {}
+    ret = {'errcode': code, 'errmsg': msg, 'data': data}
+    ret = json.dumps(ret)
+    return HttpResponse({'errcode': code, 'errmsg': msg, 'data': data})
 
 
 waps_ips = ['219.234.85.238', '219.234.85.223',
@@ -106,7 +127,7 @@ def appwall_callback(request, provider):
 alipay_public_key = config.ALIPAY_PUB_KEY
 
 
-##### 支付宝回调 ########
+# 支付宝回调 ########
 
 def verify_notify_id(notify_id):
     # 检查是否合法的notify_id, 检测该id是否已被成功处理过。
@@ -129,8 +150,8 @@ def verify_alipay_signature(sign_type, sign, params):
     return True
     if sign_type == 'RSA':
         try:
-            from Crypto.Signature import PKCS1_v1_5
-            from Crypto.Hash import SHA
+            # from Crypto.Signature import PKCS1_v1_5
+            # from Crypto.Hash import SHA
             keys = params.keys()
             keys.sort()
             src = '&'.join('%s=%s' % (k, params[k]) for k in keys
@@ -173,3 +194,35 @@ def alipay_callback(request):
         return HttpResponse('success')
     log.info('not a valid callback, ignore')
     return HttpResponse('error')
+
+
+def rsa_sign(para_str):
+    """对请求参数做rsa签名"""
+    # para_str = para_str.encode('utf-8')
+    key = RSA.importKey(settings.ALIPAY_PRIVATE_KEY)
+    h = SHA.new(para_str)
+    signer = PKCS1_v1_5.new(key)
+    return base64.b64encode(signer.sign(h))
+
+
+def alipay_sign(request):
+    if request.method != 'POST':
+        logging.error('equest.method != "POST"')
+        return error_rsp(5099, 'error')
+
+    words = request.POST.get('words')
+    if not words:
+        logging.error('if not words')
+        return error_rsp(5099, 'error')
+
+    sign_type = request.POST.get('sign_type')
+    if not sign_type:
+        sign_type = 'RSA'
+
+    if sign_type == 'RSA':
+        en_str = rsa_sign(words)
+    else:
+        en_str = ''
+
+    data = {'en_words': en_str}
+    return rsp(data)

@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 
 from django.test import TestCase
 from django.test import Client
@@ -54,6 +54,7 @@ class OrderModelTest(TestCase):
         order.id = 999
         gid = order.gen_order_id()
         self.assertEqual(900000999, gid)
+
 
 @skipIfCustomUser
 class TaskModelTest(TestCase):
@@ -325,28 +326,66 @@ class AlipayCallbackTest(TestCase):
                 "MYMqPMdh+M9QVU9tNw2kfUn5qlSHspHgEULtHChNWN+rH+clCYYrERRNA"
                 "m3AXUAawotknhtYDfzJTfpcQWmBqB+RU8YJtpsac+uOtsLc3YaiNvOd+1s=")
         params = {
-            "seller_email":"randotech@126.com",
-            "subject":u"资肋主题助手",
-            "is_total_fee_adjust":"Y",
-            "gmt_create":"2014-04-19 17:35:11",
-            "out_trade_no":"12",
-            "sign_type":"RSA",
+            "seller_email": "randotech@126.com",
+            "subject": u"资肋主题助手",
+            "is_total_fee_adjust": "Y",
+            "gmt_create": "2014-04-19 17:35:11",
+            "out_trade_no": "12",
+            "sign_type": "RSA",
             "body": u"资助主题助手, 让我们更好的为您服务。",
-            "price":"0.10",
-            "buyer_email":"bbmyth@gmail.com",
-            "discount":"0.00",
-            "trade_status":"WAIT_BUYER_PAY",
-            "trade_no":"2014041956857959",
-            "seller_id":"2088311247579029",
-            "use_coupon":"N",
-            "payment_type":"1",
-            "total_fee":"0.10",
-            "notify_time":"2014-04-19 17:35:11",
-            "quantity":"1",
-            "notify_id":"a1fbf729fd1824686d11bad2d9fa5f1d5a",
-            "notify_type":"trade_status_sync",
-            "buyer_id":"2088002802114592"
-            }
+            "price": "0.10",
+            "buyer_email": "bbmyth@gmail.com",
+            "discount": "0.00",
+            "trade_status": "WAIT_BUYER_PAY",
+            "trade_no": "2014041956857959",
+            "seller_id": "2088311247579029",
+            "use_coupon": "N",
+            "payment_type": "1",
+            "total_fee": "0.10",
+            "notify_time": "2014-04-19 17:35:11",
+            "quantity": "1",
+            "notify_id": "a1fbf729fd1824686d11bad2d9fa5f1d5a",
+            "notify_type": "trade_status_sync",
+            "buyer_id": "2088002802114592"
+        }
         print 'views %s' % views.verify_alipay_signature
         result = views.verify_alipay_signature('RSA', sign, params)
         self.assertEqual(True, result)
+
+
+@skipIfCustomUser
+class AlipaySignTest(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_alipay_sign(self):
+        # 测试用key
+        settings.ALIPAY_PRIVATE_KEY = (
+            '-----BEGIN RSA PRIVATE KEY-----\n'
+            'MIICXAIBAAKBgQCxgCa64qPZ5IKudC+YdEDi2eyLbAtub2h1aBMmHj3hyc1Vdzjh'
+            'HyUUt2rgJ7fQAnjNbypzOOWRjAuSsDhB3HfAdle7pJGU5HhVZEpVdNvvdErOMPj1'
+            '9IXjTtSc2kBej3E4ETZB0CAbAo6vGzqN8B33NXwxJ6TE3rO/aPAI0SCnUQIDAQAB'
+            'AoGAKWPKpDWJI5wHZQqutowVPVC3ueMd30iXQRldrbvLjkTyXoWIe+Y5TVVf1Jku'
+            'YZDR/oV3jpqr3X6cjD4PQDxap+D/246GK+a+eDQDLfleb2RtKF1bl/6jqVcbHtnR'
+            'kL0MNbYLkuneigVRCetAcGWRxv+BVVP9DYUBjAUq5GZyqAECQQDaFt64w0lj2Nq2'
+            'Zb/izenEHX7d5QfsXL3tI1Mhxvzc2CznoTEQgMWgq8ayHd1KUW3KqtZqlrddxYYP'
+            'OIAwHIQRAkEA0FsNqYpgU4VlzGzGrWuVq/JDdKYmWOjrk0UbIpKZtIZvvE5S06IV'
+            'KJx2fnKh31riLhIJIqoewcaBVmKCV2QvQQJAfAf1su6dloOGH6XOc5bYFAkSVfAj'
+            'iXFVMsCcTuF0fcUUBMfPt6sEulP3NOV3LQUSg+iU+RmuP05O5+kiPjp5gQJBALuG'
+            'iBhkw+fIM2Q3LuYc43v7svzFIdR55rUIyLBoM9EIAn8AG4oA4nxHvlp2f/yQRuvi'
+            'Lbi2VrJfID+Ir/lJ4UECQCgEcFtaNfdZMkQ7Icsw2xynaSJ/osQbpxcOwq4itZ56'
+            'xs80ciaAm/uEY7lKiLMmMrjLLD9PBqsrTHa3bMIFaPw='
+            '\n-----END RSA PRIVATE KEY-----')
+
+        words = ('partner="2088311247579029"&seller_id="randotech@126.com"&'
+                 'out_trade_no="P5IRN0A7B8P1BR7"&subject="珍珠项链"&'
+                 'body="[2元包邮]韩版 韩国 流行饰品太阳花小巧雏菊 珍珠项链2M15"&'
+                 'total_fee="10.00"&notify_url="http%3A%2F%2Fwwww.xxx.com"&'
+                 'service="mobile.securitypay.pay"&_input_charset="utf-8"&'
+                 'payment_type="1"&return_url="www.xxx.com"&it_b_pay="1d"&'
+                 'show_url="www.xxx.com"')
+        data = {'words': words}
+        c = Client()
+        rsp = c.post(reverse('alipaysign'), data)
+        print rsp.content
