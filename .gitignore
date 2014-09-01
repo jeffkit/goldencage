@@ -2,8 +2,7 @@
 __pycache__/
 *.py[cod]
 
-test_project
-
+*.sqlite3
 # C extensions
 *.so
 
