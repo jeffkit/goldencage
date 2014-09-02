@@ -322,31 +322,40 @@ class AlipayCallbackTest(TestCase):
         self.assertEqual(0, payment_done.send.call_count)
 
     def _test_signature(self):
-        sign = ("C5hIr/2XQM6eC4JE2bpKGXVHXQXyALYOMcVUQ7W2mjXVm0MggzEAxJGH"
-                "MYMqPMdh+M9QVU9tNw2kfUn5qlSHspHgEULtHChNWN+rH+clCYYrERRNA"
-                "m3AXUAawotknhtYDfzJTfpcQWmBqB+RU8YJtpsac+uOtsLc3YaiNvOd+1s=")
+        """ 测试之前，要去settings拷贝一个支付宝公钥
+            或者不对这个做单元测试
+        """
+        settings.ALIPAY_PUBLIC_KEY = (
+            ''
+        )
+
+        sign = (u"DoqHII4KFb5QRp5J/bAQPMI/1nJwHf8IcVHDZvvNR5CHCEmAkelExygYooWi"
+                "yWchcBd2WHULCNtPKqFEWQALTynzUAkeF64zq9nyq8nzrVulwcKGnu+l"
+                "ja6Sg+2EILb3o8RuFcPOL/YAD5y1FxjJBUM33Z+LDcWgb/+eSMDiTQk=")
         params = {
-            "seller_email": "randotech@126.com",
-            "subject": u"资肋主题助手",
-            "is_total_fee_adjust": "Y",
-            "gmt_create": "2014-04-19 17:35:11",
-            "out_trade_no": "12",
-            "sign_type": "RSA",
-            "body": u"资助主题助手, 让我们更好的为您服务。",
-            "price": "0.10",
-            "buyer_email": "bbmyth@gmail.com",
-            "discount": "0.00",
-            "trade_status": "WAIT_BUYER_PAY",
-            "trade_no": "2014041956857959",
-            "seller_id": "2088311247579029",
-            "use_coupon": "N",
-            "payment_type": "1",
-            "total_fee": "0.10",
-            "notify_time": "2014-04-19 17:35:11",
-            "quantity": "1",
-            "notify_id": "a1fbf729fd1824686d11bad2d9fa5f1d5a",
-            "notify_type": "trade_status_sync",
-            "buyer_id": "2088002802114592"
+            u"seller_email": u"randotech@126.com",
+            u"gmt_close": u"2014-09-02 11:37:03",
+            u"sign": sign,
+            u"subject": u"资助20元，赠送520金币",
+            u"is_total_fee_adjust": u"N",
+            u"gmt_create": u"2014-09-02 11:37:02",
+            u"out_trade_no": u"117800",
+            u"sign_type": u"RSA",
+            u"price": u"20.00",
+            u"buyer_email": u"mayuze13999087456@126.com",
+            u"discount": u"0.00",
+            u"trade_status": u"TRADE_FINISHED",
+            u"gmt_payment": u"2014-09-02 11:37:03",
+            u"trade_no": u"2014090200701660",
+            u"seller_id": u"2088311247579029",
+            u"use_coupon": u"N",
+            u"payment_type": u"1",
+            u"total_fee": u"20.00",
+            u"notify_time": u"2014-09-02 11:37:41",
+            u"buyer_id": u"2088502310925605",
+            u"notify_id": u"be431b210180989044cc985639b2a8635c",
+            u"notify_type": u"trade_status_sync",
+            u"quantity": u"1"
         }
         print 'views %s' % views.verify_alipay_signature
         result = views.verify_alipay_signature('RSA', sign, params)

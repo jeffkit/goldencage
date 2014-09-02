@@ -13,12 +13,13 @@ from Crypto.Hash import SHA
 
 import base64
 import hashlib
+import urllib
 import requests
 import simplejson as json
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
-from goldencage import config
+# from goldencage import config
 
 import logging
 log = logging.getLogger(__name__)
@@ -124,7 +125,7 @@ def appwall_callback(request, provider):
             'youmi_adr': youmi_callback_adr,
             }[provider](request)
 
-alipay_public_key = config.ALIPAY_PUB_KEY
+# alipay_public_key = config.ALIPAY_PUB_KEY
 
 
 # 支付宝回调 ########
@@ -147,22 +148,49 @@ def verify_notify_id(notify_id):
 
 
 def verify_alipay_signature(sign_type, sign, params):
-    return True
     if sign_type == 'RSA':
-        try:
-            # from Crypto.Signature import PKCS1_v1_5
-            # from Crypto.Hash import SHA
-            keys = params.keys()
-            keys.sort()
-            src = '&'.join('%s=%s' % (k, params[k]) for k in keys
-                           if params[k] and k not in ['sign', 'sign_type'])
+        return rsa_verify(params, sign)
+    else:
+        return True
 
-            verifier = PKCS1_v1_5.new(config.ALIPAY_PUB_KEY)
-            h = SHA.new(src.encode('utf-8'))
-            result = verifier.verify(h, sign)
-        except Exception:
-            log.error('verify signature error', exc_info=True)
-    return result
+
+def filter_para(paras):
+    """过滤空值和签名"""
+    for k, v in paras.items():
+        if not v or k in ['sign', 'sign_type']:
+            paras.pop(k)
+    return paras
+
+
+def create_link_string(paras, sort, encode):
+    """对参数排序并拼接成query string的形式"""
+    if sort:
+        paras = sorted(paras.items(), key=lambda d: d[0])
+    if encode:
+        return urllib.urlencode(paras)
+    else:
+        if not isinstance(paras, list):
+            paras = list(paras.items())
+        ps = ''
+        for p in paras:
+            if ps:
+                ps = '%s&%s=%s' % (ps, p[0], p[1])
+            else:
+                ps = '%s=%s' % (p[0], p[1])
+        return ps
+
+
+def rsa_verify(paras, sign):
+    """对签名做rsa验证"""
+    log.debug('init paras = %s' % paras)
+    # todo 要把这个公钥弄在settings里面
+    pub_key = RSA.importKey(settings.ALIPAY_PUBLIC_KEY)
+    paras = filter_para(paras)
+    paras = create_link_string(paras, True, False)
+    log.debug('type(paras) = %s paras = %s' % (type(paras), paras))
+    verifier = PKCS1_v1_5.new(pub_key)
+    data = SHA.new(paras.encode('utf-8'))
+    return verifier.verify(data, base64.b64decode(sign))
 
 
 @csrf_exempt
@@ -198,18 +226,20 @@ def alipay_callback(request):
 
 def rsa_sign(para_str):
     """对请求参数做rsa签名"""
-    # para_str = para_str.encode('utf-8')
+    para_str = para_str.encode('utf-8')
     key = RSA.importKey(settings.ALIPAY_PRIVATE_KEY)
     h = SHA.new(para_str)
     signer = PKCS1_v1_5.new(key)
     return base64.b64encode(signer.sign(h))
 
 
+@csrf_exempt
 def alipay_sign(request):
     if request.method != 'POST':
         logging.error('equest.method != "POST"')
         return error_rsp(5099, 'error')
 
+    log.debug('request.POST = %s' % request.POST)
     words = request.POST.get('words')
     if not words:
         logging.error('if not words')
