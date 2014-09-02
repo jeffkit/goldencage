@@ -19,7 +19,7 @@ import simplejson as json
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
-# from goldencage import config
+from goldencage import config
 
 import logging
 log = logging.getLogger(__name__)
@@ -125,7 +125,7 @@ def appwall_callback(request, provider):
             'youmi_adr': youmi_callback_adr,
             }[provider](request)
 
-# alipay_public_key = config.ALIPAY_PUB_KEY
+alipay_public_key = config.ALIPAY_PUBLIC_KEY
 
 
 # 支付宝回调 ########
@@ -183,8 +183,7 @@ def create_link_string(paras, sort, encode):
 def rsa_verify(paras, sign):
     """对签名做rsa验证"""
     log.debug('init paras = %s' % paras)
-    # todo 要把这个公钥弄在settings里面
-    pub_key = RSA.importKey(settings.ALIPAY_PUBLIC_KEY)
+    pub_key = RSA.importKey(config.ALIPAY_PUBLIC_KEY)
     paras = filter_para(paras)
     paras = create_link_string(paras, True, False)
     log.debug('type(paras) = %s paras = %s' % (type(paras), paras))
