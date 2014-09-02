@@ -325,10 +325,6 @@ class AlipayCallbackTest(TestCase):
         """ 测试之前，要去settings拷贝一个支付宝公钥
             或者不对这个做单元测试
         """
-        settings.ALIPAY_PUBLIC_KEY = (
-            ''
-        )
-
         sign = (u"DoqHII4KFb5QRp5J/bAQPMI/1nJwHf8IcVHDZvvNR5CHCEmAkelExygYooWi"
                 "yWchcBd2WHULCNtPKqFEWQALTynzUAkeF64zq9nyq8nzrVulwcKGnu+l"
                 "ja6Sg+2EILb3o8RuFcPOL/YAD5y1FxjJBUM33Z+LDcWgb/+eSMDiTQk=")
