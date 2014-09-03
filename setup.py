@@ -19,7 +19,7 @@ setup(name="goldencage",
       insatll_requires=[
           'requests',
           'wechat',
-          ])
+          ]
      )
 
 
