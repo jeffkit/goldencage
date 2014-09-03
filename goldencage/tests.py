@@ -13,6 +13,8 @@ import hashlib
 import time
 from mock import Mock
 import simplejson as json
+import random
+from hashlib import sha1
 
 from goldencage import views
 from goldencage import config
@@ -502,3 +504,69 @@ class AlipaySignTest(TestCase):
         c = Client()
         rsp = c.post(reverse('alipaysign'), data)
         print rsp.content
+
+
+class WechatTestCase(TestCase):
+
+    def request_content(self, xml):
+        cli = Client()
+        token = getattr(settings, 'GOLDENCAGE_WECHAT_TOKEN', '')
+        timestamp = str(time.time())
+        nonce = str(random.randint(1000, 9999))
+        sign_ele = [token, timestamp, nonce]
+        sign_ele.sort()
+        signature = sha1(''.join(sign_ele)).hexdigest()
+        params = {'timestamp': timestamp,
+                  'nonce': nonce,
+                  'signature': signature,
+                  'echostr': '234'}
+        query_string = '&'.join(['%s=%s' % (k, v) for k, v in params.items()])
+        rsp = cli.post('/gc/wechat/?' + query_string,
+                       data=xml, content_type='text/xml').content
+        return rsp
+
+    def test_success(self):
+        """获取礼券成功
+        """
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='bb', exchange_style='wechat')
+
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        xml = """<xml>
+        <ToUserName><![CDATA[techparty]]></ToUserName>
+        <FromUserName><![CDATA[o_BfQjrOWghP2cM0cN7K0kkR54fA]]></FromUserName>
+        <CreateTime>1400131860</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[bb1233]]></Content>
+        <MsgId>1234567890123456</MsgId>
+        </xml>"""
+        rsp = self.request_content(xml)
+        self.assertIn('无效的兑换码,或已被兑换过。', rsp)
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+
+        xml = """<xml>
+        <ToUserName><![CDATA[techparty]]></ToUserName>
+        <FromUserName><![CDATA[o_BfQjrOWghP2cM0cN7K0kkR54fA]]></FromUserName>
+        <CreateTime>1400131860</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[bb1233]]></Content>
+        <MsgId>1234567890123456</MsgId>
+        </xml>"""
+        rsp = self.request_content(xml)
+        self.assertIn('您已获得了10金币', rsp)
+
+        xml = """<xml>
+        <ToUserName><![CDATA[techparty]]></ToUserName>
+        <FromUserName><![CDATA[o_BfQjrOWghP2cM0cN7K0kkR54fA]]></FromUserName>
+        <CreateTime>1400131860</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[bb1233]]></Content>
+        <MsgId>1234567890123456</MsgId>
+        </xml>"""
+        rsp = self.request_content(xml)
+        self.assertIn('无效的兑换码,或已被兑换过。', rsp)

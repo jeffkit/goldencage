@@ -351,8 +351,8 @@ class Coupon(models.Model):
         return exchange
 
     class Meta:
-        verbose_name = u'优惠券'
-        verbose_name_plural = u'优惠券'
+        verbose_name = u'礼券'
+        verbose_name_plural = u'礼券'
 
     def __unicode__(self):
         return self.name
@@ -365,7 +365,8 @@ class Exchange(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL,
                              verbose_name=u'用户')
     exchange_code = models.CharField(u'兑换码', max_length=50,
-                                     blank=True, null=True)
+                                     blank=True, null=True,
+                                     db_index=True)
     status = models.CharField(u'状态', max_length=10,
                               default='WAITING',
                               choices=(('WAITING', u'等待兑换'),
@@ -375,8 +376,8 @@ class Exchange(models.Model):
     update_time = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = u'优惠券兑换纪录'
-        verbose_name_plural = u'优惠券兑换纪录'
+        verbose_name = u'礼券兑换纪录'
+        verbose_name_plural = u'礼券兑换纪录'
 
     def __unicode__(self):
         return self.coupon.name

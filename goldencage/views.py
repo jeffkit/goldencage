@@ -273,7 +273,7 @@ class ChatView(WxApplication):
 
     def on_text(self, text):
         content = text.Content
-        coupons = Coupon.objects.filter(disable=False)
+        coupons = Coupon.objects.filter(disable=False, exchange_style='wechat')
         for cp in coupons:
             if content.startswith(cp.key):
                 content = content.replace(cp.key, '').strip()
@@ -283,7 +283,7 @@ class ChatView(WxApplication):
                         u'您已获得了%d%s' % (cp.cost, self.BALANCE_UNIT_NAME),
                         text)
                 else:
-                    return WxTextResponse(u'无效的兑换码',
+                    return WxTextResponse(u'无效的兑换码,或已被兑换过。',
                                           text)
         return WxEmptyResponse(text)
 
