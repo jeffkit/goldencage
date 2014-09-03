@@ -336,7 +336,7 @@ class Coupon(models.Model):
             exchange.save()
             return exchange
 
-    def validate(self, code):
+    def validate(self, code, user=None):
         """ 验证优惠券
         """
         exchange = Exchange.objects.filter(
@@ -345,6 +345,7 @@ class Coupon(models.Model):
             return False
         exchange = exchange[0]
         exchange.status = 'DONE'
+        exchange.exchange_user = user
         exchange.save()
         apply_coupon.send(sender=Coupon, instance=self,
                           cost=exchange.cost, user=exchange.user)
@@ -374,6 +375,8 @@ class Exchange(models.Model):
     cost = models.IntegerField(u'获得积分', default=0)
     create_time = models.DateTimeField(auto_now_add=True)
     update_time = models.DateTimeField(auto_now=True)
+    exchange_user = models.CharField(u'兑换用户', max_length=200,
+                                     blank=True, null=True)
 
     class Meta:
         verbose_name = u'礼券兑换纪录'
