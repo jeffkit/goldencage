@@ -8,6 +8,8 @@ from goldencage.models import TaskLog
 from goldencage.models import Charge
 from goldencage.models import Order
 from goldencage.models import AppWallLog
+from goldencage.models import Coupon
+from goldencage.models import Exchange
 
 
 class TaskLogAdmin(admin.ModelAdmin):
@@ -43,9 +45,25 @@ class ChargeAdmin(admin.ModelAdmin):
     list_select_related = []
 
 
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('name', 'key', 'cost', 'exchange_style',
+                    'limit', 'disable')
+    list_filter = ('exchange_style', 'disable')
+
+
+class ExchangeAdmin(admin.ModelAdmin):
+    list_display = ('coupon', 'exchange_code', 'status', 'cost', 'create_time')
+    list_filter = ('status', 'create_time')
+    raw_id_fields = ('user',)
+    search_fields = ('user__id', 'exchange_code')
+    list_select_related = []
+
+
 admin.site.register(Task, admin.ModelAdmin)
 admin.site.register(ChargePlan, admin.ModelAdmin)
 admin.site.register(TaskLog, TaskLogAdmin)
 admin.site.register(Charge, ChargeAdmin)
 admin.site.register(Order, OrderAdmin)
 admin.site.register(AppWallLog, AppWallLogAdmin)
+admin.site.register(Coupon, CouponAdmin)
+admin.site.register(Exchange, ExchangeAdmin)

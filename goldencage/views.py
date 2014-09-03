@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 
 from django.http import HttpResponseForbidden
 from django.http import HttpResponse
@@ -7,16 +7,41 @@ from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.core.cache import cache
 
+from Crypto.PublicKey import RSA
+from Crypto.Signature import PKCS1_v1_5
+from Crypto.Hash import SHA
+
+import base64
 import hashlib
+import urllib
 import requests
 import simplejson as json
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
 from goldencage import config
+from goldencage.models import Coupon
+
+from wechat.official import WxApplication, WxTextResponse, WxResponse
 
 import logging
 log = logging.getLogger(__name__)
+
+
+def rsp(data=None):
+    if data is None:
+        data = {}
+    ret = {'errcode': 0, 'errmsg': 'ok', 'data': data}
+    ret = json.dumps(ret)
+    return HttpResponse(ret)
+
+
+def error_rsp(code, msg, data=None):
+    if data is None:
+        data = {}
+    ret = {'errcode': code, 'errmsg': msg, 'data': data}
+    ret = json.dumps(ret)
+    return HttpResponse({'errcode': code, 'errmsg': msg, 'data': data})
 
 
 waps_ips = ['219.234.85.238', '219.234.85.223',
@@ -103,10 +128,10 @@ def appwall_callback(request, provider):
             'youmi_adr': youmi_callback_adr,
             }[provider](request)
 
-alipay_public_key = config.ALIPAY_PUB_KEY
+alipay_public_key = config.ALIPAY_PUBLIC_KEY
 
 
-##### 支付宝回调 ########
+# 支付宝回调 ########
 
 def verify_notify_id(notify_id):
     # 检查是否合法的notify_id, 检测该id是否已被成功处理过。
@@ -126,22 +151,48 @@ def verify_notify_id(notify_id):
 
 
 def verify_alipay_signature(sign_type, sign, params):
-    return True
     if sign_type == 'RSA':
-        try:
-            from Crypto.Signature import PKCS1_v1_5
-            from Crypto.Hash import SHA
-            keys = params.keys()
-            keys.sort()
-            src = '&'.join('%s=%s' % (k, params[k]) for k in keys
-                           if params[k] and k not in ['sign', 'sign_type'])
+        return rsa_verify(params, sign)
+    else:
+        return True
 
-            verifier = PKCS1_v1_5.new(config.ALIPAY_PUB_KEY)
-            h = SHA.new(src.encode('utf-8'))
-            result = verifier.verify(h, sign)
-        except Exception:
-            log.error('verify signature error', exc_info=True)
-    return result
+
+def filter_para(paras):
+    """过滤空值和签名"""
+    for k, v in paras.items():
+        if not v or k in ['sign', 'sign_type']:
+            paras.pop(k)
+    return paras
+
+
+def create_link_string(paras, sort, encode):
+    """对参数排序并拼接成query string的形式"""
+    if sort:
+        paras = sorted(paras.items(), key=lambda d: d[0])
+    if encode:
+        return urllib.urlencode(paras)
+    else:
+        if not isinstance(paras, list):
+            paras = list(paras.items())
+        ps = ''
+        for p in paras:
+            if ps:
+                ps = '%s&%s=%s' % (ps, p[0], p[1])
+            else:
+                ps = '%s=%s' % (p[0], p[1])
+        return ps
+
+
+def rsa_verify(paras, sign):
+    """对签名做rsa验证"""
+    log.debug('init paras = %s' % paras)
+    pub_key = RSA.importKey(config.ALIPAY_PUBLIC_KEY)
+    paras = filter_para(paras)
+    paras = create_link_string(paras, True, False)
+    log.debug('type(paras) = %s paras = %s' % (type(paras), paras))
+    verifier = PKCS1_v1_5.new(pub_key)
+    data = SHA.new(paras.encode('utf-8'))
+    return verifier.verify(data, base64.b64decode(sign))
 
 
 @csrf_exempt
@@ -173,3 +224,81 @@ def alipay_callback(request):
         return HttpResponse('success')
     log.info('not a valid callback, ignore')
     return HttpResponse('error')
+
+
+def rsa_sign(para_str):
+    """对请求参数做rsa签名"""
+    para_str = para_str.encode('utf-8')
+    key = RSA.importKey(settings.ALIPAY_PRIVATE_KEY)
+    h = SHA.new(para_str)
+    signer = PKCS1_v1_5.new(key)
+    return base64.b64encode(signer.sign(h))
+
+
+@csrf_exempt
+def alipay_sign(request):
+    if request.method != 'POST':
+        logging.error('equest.method != "POST"')
+        return error_rsp(5099, 'error')
+
+    log.debug('request.POST = %s' % request.POST)
+    words = request.POST.get('words')
+    if not words:
+        logging.error('if not words')
+        return error_rsp(5099, 'error')
+
+    sign_type = request.POST.get('sign_type')
+    if not sign_type:
+        sign_type = 'RSA'
+
+    if sign_type == 'RSA':
+        en_str = rsa_sign(words)
+    else:
+        en_str = ''
+
+    data = {'en_words': en_str}
+    return rsp(data)
+
+
+class WxEmptyResponse(WxResponse):
+
+    def as_xml(self):
+        return ''
+
+
+class ChatView(WxApplication):
+    SECRET_TOKEN = getattr(settings, 'GOLDENCAGE_WECHAT_TOKEN', '')
+    BALANCE_UNIT_NAME = getattr(settings, 'GOLDENCAGE_BALANCE_UNIT_NAME',
+                                u'金币')
+
+    def on_text(self, text):
+        content = text.Content
+        coupons = Coupon.objects.filter(disable=False, exchange_style='wechat')
+        for cp in coupons:
+            if content.startswith(cp.key):
+                content = content.replace(cp.key, '').strip()
+                result = cp.validate(content)
+                if result:
+                    return WxTextResponse(
+                        u'您已获得了%d%s' % (cp.cost, self.BALANCE_UNIT_NAME),
+                        text)
+                else:
+                    return WxTextResponse(u'无效的兑换码,或已被兑换过。',
+                                          text)
+        return WxEmptyResponse(text)
+
+
+@csrf_exempt
+def wechat(request):
+    """只处理文本，并且只处理一个命令。
+    """
+    app = ChatView()
+    if request.method == 'GET':
+        # 用于校验访问权限, 直接返回一字符串即可。
+        rsp = app.process(request.GET)
+        return HttpResponse(rsp)
+    elif request.method == 'POST':
+        rsp = app.process(request.GET, request.body)
+        if not rsp:
+            return HttpResponse('')
+        return HttpResponse(rsp)

@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 
 from django.test import TestCase
 from django.test import Client
@@ -13,17 +13,127 @@ import hashlib
 import time
 from mock import Mock
 import simplejson as json
+import random
+from hashlib import sha1
 
 from goldencage import views
 from goldencage import config
 from goldencage.models import task_done
 from goldencage.models import appwalllog_done
 from goldencage.models import payment_done
+from goldencage.models import apply_coupon
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
 from goldencage.models import ChargePlan
 from goldencage.models import Task
 from goldencage.models import Order
+from goldencage.models import Coupon
+from goldencage.models import Exchange
+
+
+@skipIfCustomUser
+class CouponModelTest(TestCase):
+    """测试优惠券生成与验证。
+    生成：
+    - 如果有次数限制
+    如果完成了的次数已达到限制，返回空
+    - 无次数限制或次数未到。
+    有未使用券，则直接使用
+    无未使用券，生成新的。
+
+    验证：
+    - 无券，返回False
+    - 有券，但已完成，返回False
+    - 有券，未完成，返回True，同时发出signal
+    """
+
+    def test_generate_normal(self):
+
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        exc = coupon.generate(user)
+
+        self.assertIsNotNone(exc)
+
+    def test_generate_duplidate(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        vera = User.objects.create_user('vera', 'jeff@toraysoft.com', '123')
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+        e = coupon.generate(vera, default=1233)
+        self.assertNotEquals(e.exchange_code, '1233')
+
+    def test_generate_limit(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='DONE',
+                       exchange_code='1233')
+        exc.save()
+
+        e = coupon.generate(user)
+        self.assertIsNone(e)
+
+    def test_generate_reuse(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+
+        e = coupon.generate(user)
+        self.assertIsNotNone(e)
+        self.assertEqual('1233', e.exchange_code)
+
+    def test_valid_notfound(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+
+        result = coupon.validate('1233')
+        self.assertFalse(result)
+
+    def test_valid_duplicate(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='DONE',
+                       exchange_code='1233')
+        exc.save()
+
+        result = coupon.validate('1233')
+        self.assertFalse(result)
+
+    def test_valid_normal(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+
+        apply_coupon.send = Mock()
+
+        result = coupon.validate('1233')
+        self.assertEqual(result.status, 'DONE')
+        apply_coupon.send.assert_called_with(sender=Coupon, instance=coupon,
+                                             cost=10, user=user)
 
 
 class OrderModelTest(TestCase):
@@ -54,6 +164,7 @@ class OrderModelTest(TestCase):
         order.id = 999
         gid = order.gen_order_id()
         self.assertEqual(900000999, gid)
+
 
 @skipIfCustomUser
 class TaskModelTest(TestCase):
@@ -320,33 +431,142 @@ class AlipayCallbackTest(TestCase):
         self.assertEqual(1, cache.set.call_count)
         self.assertEqual(0, payment_done.send.call_count)
 
-    def _test_signature(self):
-        sign = ("C5hIr/2XQM6eC4JE2bpKGXVHXQXyALYOMcVUQ7W2mjXVm0MggzEAxJGH"
-                "MYMqPMdh+M9QVU9tNw2kfUn5qlSHspHgEULtHChNWN+rH+clCYYrERRNA"
-                "m3AXUAawotknhtYDfzJTfpcQWmBqB+RU8YJtpsac+uOtsLc3YaiNvOd+1s=")
+    def test_signature(self):
+        """ 测试之前，要去settings拷贝一个支付宝公钥
+            或者不对这个做单元测试
+        """
+        sign = (u"DoqHII4KFb5QRp5J/bAQPMI/1nJwHf8IcVHDZvvNR5CHCEmAkelExygYooWi"
+                "yWchcBd2WHULCNtPKqFEWQALTynzUAkeF64zq9nyq8nzrVulwcKGnu+l"
+                "ja6Sg+2EILb3o8RuFcPOL/YAD5y1FxjJBUM33Z+LDcWgb/+eSMDiTQk=")
         params = {
-            "seller_email":"randotech@126.com",
-            "subject":u"资肋主题助手",
-            "is_total_fee_adjust":"Y",
-            "gmt_create":"2014-04-19 17:35:11",
-            "out_trade_no":"12",
-            "sign_type":"RSA",
-            "body": u"资助主题助手, 让我们更好的为您服务。",
-            "price":"0.10",
-            "buyer_email":"bbmyth@gmail.com",
-            "discount":"0.00",
-            "trade_status":"WAIT_BUYER_PAY",
-            "trade_no":"2014041956857959",
-            "seller_id":"2088311247579029",
-            "use_coupon":"N",
-            "payment_type":"1",
-            "total_fee":"0.10",
-            "notify_time":"2014-04-19 17:35:11",
-            "quantity":"1",
-            "notify_id":"a1fbf729fd1824686d11bad2d9fa5f1d5a",
-            "notify_type":"trade_status_sync",
-            "buyer_id":"2088002802114592"
-            }
+            u"seller_email": u"randotech@126.com",
+            u"gmt_close": u"2014-09-02 11:37:03",
+            u"sign": sign,
+            u"subject": u"资助20元，赠送520金币",
+            u"is_total_fee_adjust": u"N",
+            u"gmt_create": u"2014-09-02 11:37:02",
+            u"out_trade_no": u"117800",
+            u"sign_type": u"RSA",
+            u"price": u"20.00",
+            u"buyer_email": u"mayuze13999087456@126.com",
+            u"discount": u"0.00",
+            u"trade_status": u"TRADE_FINISHED",
+            u"gmt_payment": u"2014-09-02 11:37:03",
+            u"trade_no": u"2014090200701660",
+            u"seller_id": u"2088311247579029",
+            u"use_coupon": u"N",
+            u"payment_type": u"1",
+            u"total_fee": u"20.00",
+            u"notify_time": u"2014-09-02 11:37:41",
+            u"buyer_id": u"2088502310925605",
+            u"notify_id": u"be431b210180989044cc985639b2a8635c",
+            u"notify_type": u"trade_status_sync",
+            u"quantity": u"1"
+        }
         print 'views %s' % views.verify_alipay_signature
         result = views.verify_alipay_signature('RSA', sign, params)
         self.assertEqual(True, result)
+
+
+@skipIfCustomUser
+class AlipaySignTest(TestCase):
+
+    def setUp(self):
+        pass
+
+    def test_alipay_sign(self):
+        # 测试用key
+        settings.ALIPAY_PRIVATE_KEY = (
+            '-----BEGIN RSA PRIVATE KEY-----\n'
+            'MIICXAIBAAKBgQCxgCa64qPZ5IKudC+YdEDi2eyLbAtub2h1aBMmHj3hyc1Vdzjh'
+            'HyUUt2rgJ7fQAnjNbypzOOWRjAuSsDhB3HfAdle7pJGU5HhVZEpVdNvvdErOMPj1'
+            '9IXjTtSc2kBej3E4ETZB0CAbAo6vGzqN8B33NXwxJ6TE3rO/aPAI0SCnUQIDAQAB'
+            'AoGAKWPKpDWJI5wHZQqutowVPVC3ueMd30iXQRldrbvLjkTyXoWIe+Y5TVVf1Jku'
+            'YZDR/oV3jpqr3X6cjD4PQDxap+D/246GK+a+eDQDLfleb2RtKF1bl/6jqVcbHtnR'
+            'kL0MNbYLkuneigVRCetAcGWRxv+BVVP9DYUBjAUq5GZyqAECQQDaFt64w0lj2Nq2'
+            'Zb/izenEHX7d5QfsXL3tI1Mhxvzc2CznoTEQgMWgq8ayHd1KUW3KqtZqlrddxYYP'
+            'OIAwHIQRAkEA0FsNqYpgU4VlzGzGrWuVq/JDdKYmWOjrk0UbIpKZtIZvvE5S06IV'
+            'KJx2fnKh31riLhIJIqoewcaBVmKCV2QvQQJAfAf1su6dloOGH6XOc5bYFAkSVfAj'
+            'iXFVMsCcTuF0fcUUBMfPt6sEulP3NOV3LQUSg+iU+RmuP05O5+kiPjp5gQJBALuG'
+            'iBhkw+fIM2Q3LuYc43v7svzFIdR55rUIyLBoM9EIAn8AG4oA4nxHvlp2f/yQRuvi'
+            'Lbi2VrJfID+Ir/lJ4UECQCgEcFtaNfdZMkQ7Icsw2xynaSJ/osQbpxcOwq4itZ56'
+            'xs80ciaAm/uEY7lKiLMmMrjLLD9PBqsrTHa3bMIFaPw='
+            '\n-----END RSA PRIVATE KEY-----')
+
+        words = ('partner="2088311247579029"&seller_id="randotech@126.com"&'
+                 'out_trade_no="P5IRN0A7B8P1BR7"&subject="珍珠项链"&'
+                 'body="[2元包邮]韩版 韩国 流行饰品太阳花小巧雏菊 珍珠项链2M15"&'
+                 'total_fee="10.00"&notify_url="http%3A%2F%2Fwwww.xxx.com"&'
+                 'service="mobile.securitypay.pay"&_input_charset="utf-8"&'
+                 'payment_type="1"&return_url="www.xxx.com"&it_b_pay="1d"&'
+                 'show_url="www.xxx.com"')
+        data = {'words': words}
+        c = Client()
+        rsp = c.post(reverse('alipaysign'), data)
+        print rsp.content
+
+
+class WechatTestCase(TestCase):
+
+    def request_content(self, xml):
+        cli = Client()
+        token = getattr(settings, 'GOLDENCAGE_WECHAT_TOKEN', '')
+        timestamp = str(time.time())
+        nonce = str(random.randint(1000, 9999))
+        sign_ele = [token, timestamp, nonce]
+        sign_ele.sort()
+        signature = sha1(''.join(sign_ele)).hexdigest()
+        params = {'timestamp': timestamp,
+                  'nonce': nonce,
+                  'signature': signature,
+                  'echostr': '234'}
+        query_string = '&'.join(['%s=%s' % (k, v) for k, v in params.items()])
+        rsp = cli.post('/gc/wechat/?' + query_string,
+                       data=xml, content_type='text/xml').content
+        return rsp
+
+    def test_success(self):
+        """获取礼券成功
+        """
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='bb', exchange_style='wechat')
+
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        xml = """<xml>
+        <ToUserName><![CDATA[techparty]]></ToUserName>
+        <FromUserName><![CDATA[o_BfQjrOWghP2cM0cN7K0kkR54fA]]></FromUserName>
+        <CreateTime>1400131860</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[bb1233]]></Content>
+        <MsgId>1234567890123456</MsgId>
+        </xml>"""
+        rsp = self.request_content(xml)
+        self.assertIn('无效的兑换码,或已被兑换过。', rsp)
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+
+        xml = """<xml>
+        <ToUserName><![CDATA[techparty]]></ToUserName>
+        <FromUserName><![CDATA[o_BfQjrOWghP2cM0cN7K0kkR54fA]]></FromUserName>
+        <CreateTime>1400131860</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[bb1233]]></Content>
+        <MsgId>1234567890123456</MsgId>
+        </xml>"""
+        rsp = self.request_content(xml)
+        self.assertIn('您已获得了10金币', rsp)
+
+        xml = """<xml>
+        <ToUserName><![CDATA[techparty]]></ToUserName>
+        <FromUserName><![CDATA[o_BfQjrOWghP2cM0cN7K0kkR54fA]]></FromUserName>
+        <CreateTime>1400131860</CreateTime>
+        <MsgType><![CDATA[text]]></MsgType>
+        <Content><![CDATA[bb1233]]></Content>
+        <MsgId>1234567890123456</MsgId>
+        </xml>"""
+        rsp = self.request_content(xml)
+        self.assertIn('无效的兑换码,或已被兑换过。', rsp)
