@@ -31,6 +31,11 @@ ALIPAY_PID 支付宝的ParternerID
 
 GOLDENCAGE_ORDER_ID_PREFIX ,订单前缀，仅支持数字。用于多个应用共享一个parternerID的情况，避免订单重复。
 
+GOLDENCAGE_WECHAT_TOKEN, 微信兑换礼券时用，微信回调的token。
+
+GOLDENCAGE_BALANCE_UNIT_NAME, 用户余额的单位名称，如金币，米币等。默认为金币。
+
+GOLDENCAGE_COUPONCODE_MAX, 礼券码的最大值，派发礼券时将从1000至该值随机选择。默认为999999。
 
 配置url
 -------
@@ -59,3 +64,6 @@ cost：价值，数值型，具体意义视应用定，可以是金币数，也�
 
 user：用户。
 
+apply_coupon: 领取了一张礼券，除上面的共同参数外，还有一个instanct参数：
+
+instance， coupone的实例。

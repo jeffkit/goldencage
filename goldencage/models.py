@@ -19,6 +19,7 @@ log = logging.getLogger(__name__)
 task_done = Signal(providing_args=['cost', 'user'])
 appwalllog_done = Signal(providing_args=['cost', 'user'])
 payment_done = Signal(providing_args=['cost', 'user'])
+apply_coupon = Signal(providing_args=['instance', 'cost', 'user'])
 
 
 class Task(models.Model):
@@ -35,7 +36,7 @@ class Task(models.Model):
     limit = models.IntegerField(
         u'次数上限',
         default=0,
-        help_text=u'任务允许执行的最大次数，0为不限',)
+        help_text=u'任务允许执行的最大次数，0为不限')
     daily = models.BooleanField(u'允许每天一次', default=False)
 
     def _save_log(self, user, valid=True, cost=None):
@@ -286,3 +287,96 @@ class Charge(models.Model):
                 return chg
             except IntegrityError:
                 return None
+
+
+class Coupon(models.Model):
+    """优惠券，用于各种活动兑换金币用。
+    """
+    name = models.CharField(u'名称', max_length=50)
+    key = models.CharField(u'代码', max_length=50)
+    cost = models.IntegerField(u'价值积分', default=0)
+    disable = models.BooleanField(u'禁用', default=False)
+    create_time = models.DateTimeField(auto_now_add=True)
+
+    exchange_style = models.CharField(u'兑换方式', default=u'wechat',
+                                      max_length=10)
+    exchange_config = JSONField(blank=True, null=True)
+
+    # 限制
+    limit = models.IntegerField(u'每个限制次数', default=1,
+                                help_text=u'值为0时不限')
+
+    def generate(self,  user, default=None):
+        """为用户生成一张优惠券,
+        """
+
+        # 看看该优惠券是否限制次数，有限制，同时
+        if self.limit:
+            exchanges = Exchange.objects.filter(
+                coupon=self, user=user, status='DONE').count()
+            if exchanges >= self.limit:
+                return None
+
+        waitings = Exchange.objects.filter(
+            coupon=self, user=user, status='WAITING')
+        if waitings:
+            return waitings[0]
+        else:
+            max_value = getattr(settings, 'GOLDENCAGE_COUPONCODE_MAX',
+                                999999)
+            code = default or random.randint(1000, max_value)
+            while True:
+                test = Exchange.objects.filter(exchange_code=str(code),
+                                               coupon=self, status='WAITING')
+                if not test:
+                    break
+                code = random.randint(1000, max_value)
+            exchange = Exchange(coupon=self, user=user, cost=self.cost,
+                                exchange_code=str(code))
+            exchange.save()
+            return exchange
+
+    def validate(self, code):
+        """ 验证优惠券
+        """
+        exchange = Exchange.objects.filter(
+            coupon=self, exchange_code=code, status='WAITING')
+        if not exchange:
+            return False
+        exchange = exchange[0]
+        exchange.status = 'DONE'
+        exchange.save()
+        apply_coupon.send(sender=Coupon, instance=self,
+                          cost=exchange.cost, user=exchange.user)
+        return exchange
+
+    class Meta:
+        verbose_name = u'优惠券'
+        verbose_name_plural = u'优惠券'
+
+    def __unicode__(self):
+        return self.name
+
+
+class Exchange(models.Model):
+    """优惠券兑换纪录
+    """
+    coupon = models.ForeignKey(Coupon, verbose_name=u'优惠券')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL,
+                             verbose_name=u'用户')
+    exchange_code = models.CharField(u'兑换码', max_length=50,
+                                     blank=True, null=True)
+    status = models.CharField(u'状态', max_length=10,
+                              default='WAITING',
+                              choices=(('WAITING', u'等待兑换'),
+                                       ('DONE', u'兑换完成')))
+    cost = models.IntegerField(u'获得积分', default=0)
+    create_time = models.DateTimeField(auto_now_add=True)
+    update_time = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = u'优惠券兑换纪录'
+        verbose_name_plural = u'优惠券兑换纪录'
+
+    def __unicode__(self):
+        return self.coupon.name

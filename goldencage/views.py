@@ -20,6 +20,9 @@ import simplejson as json
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
 from goldencage import config
+from goldencage.models import Coupon
+
+from wechat.official import WxApplication, WxTextResponse, WxResponse
 
 import logging
 log = logging.getLogger(__name__)
@@ -255,3 +258,47 @@ def alipay_sign(request):
 
     data = {'en_words': en_str}
     return rsp(data)
+
+
+class WxEmptyResponse(WxResponse):
+
+    def as_xml(self):
+        return ''
+
+
+class ChatView(WxApplication):
+    SECRET_TOKEN = getattr(settings, 'GOLDENCAGE_WECHAT_TOKEN', '')
+    BALANCE_UNIT_NAME = getattr(settings, 'GOLDENCAGE_BALANCE_UNIT_NAME',
+                                u'金币')
+
+    def on_text(self, text):
+        content = text.Content
+        coupons = Coupon.objects.filter(disable=False)
+        for cp in coupons:
+            if content.startswith(cp.key):
+                content = content.replace(cp.key, '').strip()
+                result = cp.validate(content)
+                if result:
+                    return WxTextResponse(
+                        u'您已获得了%d%s' % (cp.cost, self.BALANCE_UNIT_NAME),
+                        text)
+                else:
+                    return WxTextResponse(u'无效的兑换码',
+                                          text)
+        return WxEmptyResponse(text)
+
+
+@csrf_exempt
+def wechat(request):
+    """只处理文本，并且只处理一个命令。
+    """
+    app = ChatView()
+    if request.method == 'GET':
+        # 用于校验访问权限, 直接返回一字符串即可。
+        rsp = app.process(request.GET)
+        return HttpResponse(rsp)
+    elif request.method == 'POST':
+        rsp = app.process(request.GET, request.body)
+        if not rsp:
+            return HttpResponse('')
+        return HttpResponse(rsp)

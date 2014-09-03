@@ -16,6 +16,10 @@ setup(name="goldencage",
       long_description=long_description,
       packages=find_packages('.'),
       zip_safe=False,
+      insatll_requires=[
+          'requests',
+          'wechat',
+          ])
      )
 
 

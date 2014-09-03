@@ -19,11 +19,119 @@ from goldencage import config
 from goldencage.models import task_done
 from goldencage.models import appwalllog_done
 from goldencage.models import payment_done
+from goldencage.models import apply_coupon
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
 from goldencage.models import ChargePlan
 from goldencage.models import Task
 from goldencage.models import Order
+from goldencage.models import Coupon
+from goldencage.models import Exchange
+
+
+@skipIfCustomUser
+class CouponModelTest(TestCase):
+    """测试优惠券生成与验证。
+    生成：
+    - 如果有次数限制
+    如果完成了的次数已达到限制，返回空
+    - 无次数限制或次数未到。
+    有未使用券，则直接使用
+    无未使用券，生成新的。
+
+    验证：
+    - 无券，返回False
+    - 有券，但已完成，返回False
+    - 有券，未完成，返回True，同时发出signal
+    """
+
+    def test_generate_normal(self):
+
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        exc = coupon.generate(user)
+
+        self.assertIsNotNone(exc)
+
+    def test_generate_duplidate(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        vera = User.objects.create_user('vera', 'jeff@toraysoft.com', '123')
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+        e = coupon.generate(vera, default=1233)
+        self.assertNotEquals(e.exchange_code, '1233')
+
+    def test_generate_limit(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='DONE',
+                       exchange_code='1233')
+        exc.save()
+
+        e = coupon.generate(user)
+        self.assertIsNone(e)
+
+    def test_generate_reuse(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+
+        e = coupon.generate(user)
+        self.assertIsNotNone(e)
+        self.assertEqual('1233', e.exchange_code)
+
+    def test_valid_notfound(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+
+        result = coupon.validate('1233')
+        self.assertFalse(result)
+
+    def test_valid_duplicate(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='DONE',
+                       exchange_code='1233')
+        exc.save()
+
+        result = coupon.validate('1233')
+        self.assertFalse(result)
+
+    def test_valid_normal(self):
+        coupon = Coupon(name='test', cost=10, limit=1,
+                        key='test')
+        coupon.save()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+
+        exc = Exchange(coupon=coupon, user=user, cost=10, status='WAITING',
+                       exchange_code='1233')
+        exc.save()
+
+        apply_coupon.send = Mock()
+
+        result = coupon.validate('1233')
+        self.assertEqual(result.status, 'DONE')
+        apply_coupon.send.assert_called_with(sender=Coupon, instance=coupon,
+                                             cost=10, user=user)
 
 
 class OrderModelTest(TestCase):
@@ -321,7 +429,7 @@ class AlipayCallbackTest(TestCase):
         self.assertEqual(1, cache.set.call_count)
         self.assertEqual(0, payment_done.send.call_count)
 
-    def _test_signature(self):
+    def test_signature(self):
         """ 测试之前，要去settings拷贝一个支付宝公钥
             或者不对这个做单元测试
         """
