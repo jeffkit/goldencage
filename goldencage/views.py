@@ -272,7 +272,7 @@ class ChatView(WxApplication):
                                 u'金币')
 
     def on_text(self, text):
-        content = text.Content
+        content = text.Content.lower()
         coupons = Coupon.objects.filter(disable=False, exchange_style='wechat')
         for cp in coupons:
             if content.startswith(cp.key):
