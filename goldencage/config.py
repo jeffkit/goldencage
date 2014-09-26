@@ -23,7 +23,7 @@ APPWALLLOG_MAPPING = {
     'dianjoy_adr': {'identity': ('device_id', 'pack_name',
                                  'trade_type', 'task_id'),
                     'cost': 'currency',
-                    'user_id': 'sunid',
+                    'user_id': 'snuid',
                     'product_id': 'pack_name',
                     'product_name': 'ad_name',
                     },

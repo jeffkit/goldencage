@@ -28,6 +28,8 @@ ALLOWED_HOSTS = []
 
 YOUMI_CALLBACK_SECRET = 'youmikey'
 
+GOLDENCAGE_DIANJOY_ANDROID_SECRET = 'dianjoykey'
+
 
 # Application definition
 

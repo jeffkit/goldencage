@@ -274,7 +274,7 @@ class AppWallCallbackTest(TestCase):
         self.assertEqual(rsp.status_code, 403)
 
     def test_youmi_ios_duplicate(self):
-        "同一个订单提交两次"
+        """同一个订单提交两次"""
         user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
         data = self.create_youmi_ios_data(user)
         keys = data.keys()
@@ -295,6 +295,49 @@ class AppWallCallbackTest(TestCase):
 
         rsp = c.get(reverse('wall_cb', args=['youmi_ios']), data)
         self.assertEqual(rsp.status_code, 403)
+
+    def create_dianjoy_adr_data(self, user):
+        ts = int(time.time())
+        return {'snuid': user.pk, 'device_id': 'my device',
+                'app_id': 'helper', 'currency': 100,
+                'app_ratio': 1, 'time_stamp': ts,
+                'ad_name': '医生', 'pack_name': 'com.toraysoft.music',
+                'trade_type': 1, 'task_id': 'the_task_id',
+                }
+
+    def test_dianjoy_adr_invalid_token(self):
+        """点乐：无效token
+        """
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        data = self.create_dianjoy_adr_data(user)
+        data['token'] = 'not a valid token'
+        c = Client()
+        rsp = c.get(reverse('wall_cb', args=['dianjoy_adr']), data)
+        self.assertEqual(rsp.status_code, 403)
+
+    def test_dianjoy_adr_success(self):
+        """点乐，有效
+        """
+        appwalllog_done = Mock()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        data = self.create_dianjoy_adr_data(user)
+        src = str(data['time_stamp']) + \
+            settings.GOLDENCAGE_DIANJOY_ANDROID_SECRET
+        md5 = hashlib.md5()
+        md5.update(src.encode('utf-8'))
+        sign = md5.hexdigest()
+        data['token'] = sign
+        c = Client()
+        rsp = c.get(reverse('wall_cb', args=['dianjoy_adr']), data)
+        self.assertEqual(rsp.status_code, 200)
+        self.assertEqual(rsp.content, 'OK')
+        appwalllog_done.assert_called()
+
+        appwalllog_done = Mock()
+        rsp = c.get(reverse('wall_cb', args=['dianjoy_adr']), data)
+        self.assertEqual(rsp.status_code, 200)
+        self.assertEqual(rsp.content, 'OK, But duplicate item')
+        self.assertFalse(appwalllog_done.called)
 
 
 @skipIfCustomUser

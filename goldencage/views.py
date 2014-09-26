@@ -288,6 +288,9 @@ class ChatView(WxApplication):
     SECRET_TOKEN = getattr(settings, 'GOLDENCAGE_WECHAT_TOKEN', '')
     BALANCE_UNIT_NAME = getattr(settings, 'GOLDENCAGE_BALANCE_UNIT_NAME',
                                 u'金币')
+    SUCCESS_MESSAGE_TEMPLATE = getattr(
+        settings, 'GOLDENCAGE_COUPONE_SUCCESS_MESSAGE_TEMPLATE',
+        u'您已获得了%d%s')
 
     def on_text(self, text):
         content = text.Content.lower()
@@ -298,8 +301,8 @@ class ChatView(WxApplication):
                 result = cp.validate(content)
                 if result:
                     return WxTextResponse(
-                        u'您已获得了%d%s' % (cp.cost, self.BALANCE_UNIT_NAME),
-                        text)
+                        self.SUCCESS_MESSAGE_TEMPLATE %
+                        (cp.cost, self.BALANCE_UNIT_NAME), text)
                 else:
                     return WxTextResponse(u'无效的兑换码,或已被兑换过。',
                                           text)
