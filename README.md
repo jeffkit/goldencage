@@ -27,6 +27,8 @@ YOUMI_CALLBACK_SECRET  有米iOS积分墙回调的密钥。
 
 YOUMI_CALLBACK_SECRET_ADR 有米Android积分墙回调密钥。
 
+GOLDENCAGE_DIANJOY_ANDROID_SECRET 点乐Android积分墙回调密钥。
+
 ALIPAY_PID 支付宝的ParternerID
 
 GOLDENCAGE_ORDER_ID_PREFIX ,订单前缀，仅支持数字。用于多个应用共享一个parternerID的情况，避免订单重复。
@@ -36,6 +38,8 @@ GOLDENCAGE_WECHAT_TOKEN, 微信兑换礼券时用，微信回调的token。
 GOLDENCAGE_BALANCE_UNIT_NAME, 用户余额的单位名称，如金币，米币等。默认为金币。
 
 GOLDENCAGE_COUPONCODE_MAX, 礼券码的最大值，派发礼券时将从1000至该值随机选择。默认为999999。
+
+GOLDENCAGE_COUPONE_SUCCESS_MESSAGE_TEMPLATE, 积分兑换成功后的提示语模板，接受%d及%s两个参数。
 
 配置url
 -------
