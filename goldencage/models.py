@@ -11,6 +11,7 @@ from datetime import datetime
 from goldencage import config
 import random
 import pytz
+from hashlib import sha1
 
 import logging
 log = logging.getLogger(__name__)
@@ -102,7 +103,8 @@ class AppWallLog(models.Model):
     provider = models.CharField(max_length=20,
                                 choices=(('youmi_ios', u'有米iOS'),
                                          ('youmi_adr', u'有米Android'),
-                                         ('waps', u'万普')))
+                                         ('waps', u'万普'),
+                                         ('dianjoy_adr', u'点乐')))
     identity = models.CharField(max_length=100)
     cost = models.IntegerField()
     product_id = models.CharField(max_length=100)
@@ -135,6 +137,9 @@ class AppWallLog(models.Model):
                     return True
             setattr(alog, key, value)
         alog.extra_data = data
+        # 超出的唯一标识，将换成为sha1字符串再存储。
+        if len(alog.identity) >= 100:
+            alog.identity = sha1(alog.identity).hexdigest()
         try:
             alog.save()
             appwalllog_done.send(sender=cls, cost=alog.cost, user=alog.user)

@@ -122,10 +122,28 @@ def youmi_callback_ios(request):
     return HttpResponseForbidden("Signature verification fail")
 
 
+def dianjoy_callback_adr(request):
+    token = request.GET.get('token')
+    time_stamp = request.GET.get('time_stamp')
+    md5 = hashlib.md5()
+    md5.update(time_stamp + settings.GOLDENCAGE_DIANJOY_ANDROID_SECRET)
+    sign = md5.hexdigest()
+    if sign != token:
+        return HttpResponseForbidden('token error')
+    log = {}
+    for key in request.GET.keys():
+        log[key] = request.GET[key]
+    if AppWallLog.log(log, provider='dianjoy_adr'):
+        return HttpResponse('OK')
+    else:
+        return HttpResponse('OK, But duplicate item')
+
+
 def appwall_callback(request, provider):
     return {'waps': waps_callback,
             'youmi_ios': youmi_callback_ios,
             'youmi_adr': youmi_callback_adr,
+            'dianjoy_adr': dianjoy_callback_adr,
             }[provider](request)
 
 alipay_public_key = config.ALIPAY_PUBLIC_KEY

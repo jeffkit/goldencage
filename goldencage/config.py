@@ -19,7 +19,14 @@ APPWALLLOG_MAPPING = {
                   'user_id': 'user',
                   'product_id': 'ad',
                   'product_name': 'ad',
-                  }
+                  },
+    'dianjoy_adr': {'identity': ('device_id', 'pack_name',
+                                 'trade_type', 'task_id'),
+                    'cost': 'currency',
+                    'user_id': 'sunid',
+                    'product_id': 'pack_name',
+                    'product_name': 'ad_name',
+                    },
 }
 
 PAYMENT_MAPPING = {
