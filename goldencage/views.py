@@ -134,7 +134,7 @@ def dianjoy_callback_adr(request):
     for key in request.GET.keys():
         log[key] = request.GET[key]
     if AppWallLog.log(log, provider='dianjoy_adr'):
-        return HttpResponse('OK')
+        return HttpResponse('200')
     else:
         return HttpResponse('OK, But duplicate item')
 
