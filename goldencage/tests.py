@@ -302,7 +302,7 @@ class AppWallCallbackTest(TestCase):
                 'app_id': 'helper', 'currency': 100,
                 'app_ratio': 1, 'time_stamp': ts,
                 'ad_name': '医生', 'pack_name': 'com.toraysoft.music',
-                'trade_type': 1, 'task_id': 'the_task_id',
+                'trade_type': 1,
                 }
 
     def test_dianjoy_adr_invalid_token(self):
@@ -330,7 +330,7 @@ class AppWallCallbackTest(TestCase):
         c = Client()
         rsp = c.get(reverse('wall_cb', args=['dianjoy_adr']), data)
         self.assertEqual(rsp.status_code, 200)
-        self.assertEqual(rsp.content, 'OK')
+        self.assertEqual(rsp.content, '200')
         appwalllog_done.assert_called()
 
         appwalllog_done = Mock()

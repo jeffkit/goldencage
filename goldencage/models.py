@@ -127,7 +127,7 @@ class AppWallLog(models.Model):
         alog = AppWallLog(provider=provider)
         for key, value in mapping.iteritems():
             if isinstance(value, tuple):
-                value = '_'.join([data[v] for v in value])
+                value = '_'.join([data.get(v, '') for v in value])
             else:
                 value = data[value]
             if key in ('user_id', 'cost'):
