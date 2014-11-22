@@ -347,11 +347,11 @@ class AlipayCallbackTest(TestCase):
         self.user = User.objects.create_user('jeff',
                                              'jeff@toraysoft.com', '123')
         self.plan = ChargePlan(name=u'plan1', code='plan1',
-                               value=30, cost=750, coupon=50)
+                               value=3000, cost=750, coupon=50)
         self.plan.save()
 
     def create_payment_data(self):
-        order = Order(user=self.user, plan=self.plan, value=30)
+        order = Order(user=self.user, plan=self.plan, value=3000)
         order.save()
         return {'notify_time': '', 'notify_type': 'trade_status_sync',
                 'notify_id': 'csdfo834jr', 'sign_type': 'RSA',
