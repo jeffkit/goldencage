@@ -260,6 +260,10 @@ class Charge(models.Model):
         chg.extra_data = data
 
         order = Order.objects.get(pk=Order.get_real_id(chg.order_id))
+
+        if order.value != chg.value:
+            log.error(u'充值的金额与套餐不匹配，无效 %s' % chg.id)
+            return None
         plan = order.plan
         chg.cost = plan.cost
         chg.user = order.user
