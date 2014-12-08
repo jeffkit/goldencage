@@ -33,6 +33,7 @@ from goldencage.models import Exchange
 
 @skipIfCustomUser
 class CouponModelTest(TestCase):
+
     """测试优惠券生成与验证。
     生成：
     - 如果有次数限制
@@ -613,3 +614,20 @@ class WechatTestCase(TestCase):
         </xml>"""
         rsp = self.request_content(xml)
         self.assertIn('无效的兑换码,或已被兑换过。', rsp)
+
+
+@skipIfCustomUser
+class WechatpayTest(TestCase):
+
+    def test_gen_package(self):
+        cli = Client()
+        package = {'bank_type': 'WX', 'body': '千足 金箍棒',
+                   'fee_type': '1', 'input_charset': 'UTF-8',
+                   'getOutTradNo': '81282373272',
+                   'spbill_create_ip': '192.168.1.1', 'total_fee': '1'}
+        data = {'traceid': 'ikaoiaos', 'package': package}
+        data = json.dumps(data)
+        print 'data = %s' % data
+        rsp = cli.post('/gc/wechatpaypackage/',
+                       data=data, content_type='application/json')
+        print rsp.content

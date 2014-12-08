@@ -1,3 +1,5 @@
+# encoding=utf-8
+
 """
 Django settings for test_project project.
 
@@ -140,9 +142,9 @@ LOGGING = {
     }
 }
 
-WECHATPAY_APPKEY = ''
-WECHATPAY_APPID = ''
-WECHATPAY_SECRET = ''
-WECHATPAY_NOTIFY_URL = ''
-WECHATPAY_PARTNERKEY = ''
-WECHATPAY_PARTNERID = ''  # 商户号
+WECHATPAY_APPKEY = '1234'
+WECHATPAY_APPID = '2345'
+WECHATPAY_SECRET = '1234'
+WECHATPAY_NOTIFY_URL = 'http://www.baidu.com/'
+WECHATPAY_PARTNERKEY = '12232'
+WECHATPAY_PARTNERID = '32323'  # 商户号

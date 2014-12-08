@@ -362,15 +362,17 @@ def wechat_pay_gen_package(request):
         logging.error('equest.method != "POST"')
         return error_rsp(5099, 'error')
 
-    log.debug('request.DATA = %s' % request.DATA)
-    package = request.DATA.get('package')
+    log.debug('request.body = %s' % request.body)
+    body = json.loads(request.body)
+    package = body.get('package')
     if not package:
-        return (5099, 'error')
+        return error_rsp(5099, 'error')
     package = _wechatpay_gen_package(package)
+    log.debug('package = %s' % package)
 
     noncestr = random_str(13)
     timestamp = '%.f' % time.time()
-    traceid = request.DATA.get('traceid', '')
+    traceid = body.get('traceid', '')
     sha_param = {
         'appid': settings.WECHATPAY_APPID,
         'appkey': settings.WECHATPAY_APPKEY,
@@ -397,13 +399,30 @@ def wechat_pay_gen_package(request):
 def convert_params_to_str_in_order(params):
     param_list = sorted(params.iteritems(), key=lambda d: d[0])
     log.debug('param_list = %s' % param_list)
-    tmp_str = ''
+    tmp_str = u''
     for val in param_list:
         if tmp_str:
             tmp_str = tmp_str + '&%s=%s' % (val[0], val[1])
         else:
             tmp_str = '%s=%s' % (val[0], val[1])
-    return tmp_str
+    return tmp_str.encode('utf-8')
+
+
+def convert_params_to_str_in_order_urlcode(params):
+    param_list = sorted(params.iteritems(), key=lambda d: d[0])
+    log.debug('param_list = %s' % param_list)
+    tmp_str = u''
+    for val in param_list:
+        vall = u'%s' % val[1]
+        vall = vall.encode('utf-8')
+        log.debug('vall = %s' % vall)
+        vall = urllib.quote(vall)
+        if tmp_str:
+            append_str = u'&%s=%s' % (val[0], vall)
+            tmp_str = tmp_str + append_str
+        else:
+            tmp_str = u'%s=%s' % (val[0], vall)
+    return tmp_str.encode('utf-8')
 
 
 def _wechatpay_gen_package(package):
@@ -414,9 +433,9 @@ def _wechatpay_gen_package(package):
     log.debug('stringSignTemp = %s' % stringSignTemp)
     md5 = hashlib.md5()
     md5.update(stringSignTemp)
-    sign_str = md5.hexdigest().uppercase()
+    sign_str = md5.hexdigest().upper()
     log.debug('sign = %s' % sign_str)
-    string1 = urllib.quote(string1)
+    string1 = convert_params_to_str_in_order_urlcode(package)
     package = string1 + '&sign=%s' % sign_str
     return package
 
