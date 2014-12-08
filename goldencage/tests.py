@@ -631,3 +631,19 @@ class WechatpayTest(TestCase):
         rsp = cli.post('/gc/wechatpaypackage/',
                        data=data, content_type='application/json')
         print rsp.content
+
+    def test_xml_to_dict(self):
+        from .views import _wechatpay_xml_to_dict
+        raw_str = ("""
+            <xml>
+                <OpenId><![CDATA[111222]]></OpenId>
+                <AppId><![CDATA[wwwwb4f85f3a797777]]></AppId>
+                <IsSubscribe>1</IsSubscribe>
+                <TimeStamp> 1369743511</TimeStamp>
+                <NonceStr><![CDATA[jALldRTHAFd5Tgs5]]></NonceStr>
+                <AppSignature><![CDATA[bafe07f060f22dcda0bfdb4b5ff756f973aecffa]]>
+                </AppSignature>
+                <SignMethod><![CDATA[sha1]]></SignMethod >
+            </xml>""")
+        dict_ret = _wechatpay_xml_to_dict(raw_str)
+        print dict_ret

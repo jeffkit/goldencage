@@ -18,7 +18,7 @@ import requests
 import simplejson as json
 from random import Random
 import time
-import xml.etree.ElementTree as ET
+import xmltodict
 
 
 from goldencage.models import AppWallLog
@@ -362,13 +362,14 @@ def wechat_pay_gen_package(request):
         logging.error('equest.method != "POST"')
         return error_rsp(5099, 'error')
 
-    log.debug('request.body = %s' % request.body)
+    log.debug(u'request.body = %s' % request.body)
+    log.debug(u'body type = %s' % type(request.body))
     body = json.loads(request.body)
     package = body.get('package')
     if not package:
         return error_rsp(5099, 'error')
     package = _wechatpay_gen_package(package)
-    log.debug('package = %s' % package)
+    log.debug(u'package = %s' % package)
 
     noncestr = random_str(13)
     timestamp = '%.f' % time.time()
@@ -381,7 +382,7 @@ def wechat_pay_gen_package(request):
         'timestamp': timestamp,
         'traceid': traceid}
     app_signature = _wechatpay_app_signature(sha_param)
-    log.debug('app_signature = %s' % app_signature)
+    log.debug(u'app_signature = %s' % app_signature)
 
     data = {'package': package}
     data['appid'] = settings.WECHATPAY_APPID
@@ -391,14 +392,14 @@ def wechat_pay_gen_package(request):
     data['sign_method'] = 'sha1'
     data['app_signature'] = app_signature
 
-    log.debug('rsp data = %s' % data)
+    log.debug(u'rsp data = %s' % data)
 
     return rsp(data)
 
 
 def convert_params_to_str_in_order(params):
     param_list = sorted(params.iteritems(), key=lambda d: d[0])
-    log.debug('param_list = %s' % param_list)
+    log.debug(u'param_list = %s' % param_list)
     tmp_str = u''
     for val in param_list:
         if tmp_str:
@@ -430,11 +431,11 @@ def _wechatpay_gen_package(package):
     package['partner'] = settings.WECHATPAY_PARTNERID
     string1 = convert_params_to_str_in_order(package)
     stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
-    log.debug('stringSignTemp = %s' % stringSignTemp)
+    log.debug(u'stringSignTemp = %s' % stringSignTemp)
     md5 = hashlib.md5()
     md5.update(stringSignTemp)
     sign_str = md5.hexdigest().upper()
-    log.debug('sign = %s' % sign_str)
+    log.debug(u'sign = %s' % sign_str)
     string1 = convert_params_to_str_in_order_urlcode(package)
     package = string1 + '&sign=%s' % sign_str
     return package
@@ -474,7 +475,7 @@ def wechat_pay_notify(request):
 
     nid = cache.get('wechatpay_nid_' + hashlib.sha1(notify_id).hexdigest())
     if nid:
-        log.info('duplicated notify, drop it')
+        log.info(u'duplicated notify, drop it')
         return HttpResponse('fail')
     body_dict = _wechatpay_xml_to_dict(request.body)
     data = {}
@@ -484,25 +485,23 @@ def wechat_pay_notify(request):
         data[key] = item
     data['trade_state'] = str(data['trade_state'])
     data['total_fee'] = data['total_fee'] + (data['discount'] or 0)
+    log.debug(u'Charge.recharge data = %s' % data)
     if Charge.recharge(data, provider='wechatpay'):
         cache.set('wechatpay_nid_' + hashlib.sha1(notify_id).hexdigest(),
                   order_id, 90000)  # notify_id 保存25小时。
-        log.info('wechatpay callback success')
+        log.info(u'wechatpay callback success')
         return HttpResponse('success')
 
-    log.info('not a valid callback, ignore')
+    log.info(u'not a valid callback, ignore')
     return HttpResponse('fail')
 
 
 def _wechatpay_xml_to_dict(raw_str):
-    msg = {}
-    root_elem = ET.fromstring(raw_str)
-    if root_elem.tag == 'xml':
-        for child in root_elem:
-            msg[child.tag] = child.text
-        return msg
-    else:
-        return None
+    rsp_xml_obj = xmltodict.parse(raw_str)
+    rsp_xml_json = json.dumps(rsp_xml_obj)
+    rsp_xml_dict = json.loads(rsp_xml_json)
+
+    return rsp_xml_dict
 
 
 def para_filter(params):
@@ -513,14 +512,14 @@ def para_filter(params):
 
 def _wechatpay_verify_notify(params):
     wechat_sign = params['sign']
-    log.debug('wechat_sign = %s' % wechat_sign)
+    log.debug(u'wechat_sign = %s' % wechat_sign)
     filterParams = para_filter(params)
     filterParams['sign_type'] = 'MD5'
     string1 = convert_params_to_str_in_order(filterParams)
     stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
-    log.debug('stringSignTemp = %s' % stringSignTemp)
+    log.debug(u'stringSignTemp = %s' % stringSignTemp)
     md5 = hashlib.md5()
     md5.update(stringSignTemp)
     sign = md5.hexdigest().uppercase()
-    log.debug('sign = %s' % sign)
+    log.debug(u'sign = %s' % sign)
     return wechat_sign == sign
