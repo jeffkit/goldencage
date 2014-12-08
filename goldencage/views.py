@@ -16,6 +16,10 @@ import hashlib
 import urllib
 import requests
 import simplejson as json
+from random import Random
+import time
+import xml.etree.ElementTree as ET
+
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
@@ -323,3 +327,181 @@ def wechat(request):
         if not rsp:
             return HttpResponse('')
         return HttpResponse(rsp)
+
+
+# 微信支付
+WECHATPAY_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
+
+
+def _wechat_pay_get_access_token():
+    params = {
+        'grant_type': 'client_credential',
+        'appid': settings.WECHATPAY_APPID,
+        'secret': settings.WECHATPAY_SECRET
+    }
+    rsp = requests.get(WECHATPAY_ACCESS_TOKEN_URL, params=params)
+    content = json.loads(rsp.content)
+    errcode = content.get('errcode')
+    if errcode:
+        log.error(errcode)
+        log.error(content['errmsg'])
+        return {}
+    else:
+        return content
+
+
+def wechat_pay_access_token(request):
+    # 7200s
+    # 7000s
+    pass
+
+
+@csrf_exempt
+def wechat_pay_gen_package(request):
+    if request.method != 'POST':
+        logging.error('equest.method != "POST"')
+        return error_rsp(5099, 'error')
+
+    log.debug('request.DATA = %s' % request.DATA)
+    package = request.DATA.get('package')
+    if not package:
+        return (5099, 'error')
+    package = _wechatpay_gen_package(package)
+
+    noncestr = random_str(13)
+    timestamp = '%.f' % time.time()
+    traceid = request.DATA.get('traceid', '')
+    sha_param = {
+        'appid': settings.WECHATPAY_APPID,
+        'appkey': settings.WECHATPAY_APPKEY,
+        'noncestr': noncestr,
+        'package': package,
+        'timestamp': timestamp,
+        'traceid': traceid}
+    app_signature = _wechatpay_app_signature(sha_param)
+    log.debug('app_signature = %s' % app_signature)
+
+    data = {'package': package}
+    data['appid'] = settings.WECHATPAY_APPID
+    data['noncestr'] = noncestr
+    data['traceid'] = traceid
+    data['timestamp'] = timestamp
+    data['sign_method'] = 'sha1'
+    data['app_signature'] = app_signature
+
+    log.debug('rsp data = %s' % data)
+
+    return rsp(data)
+
+
+def convert_params_to_str_in_order(params):
+    param_list = sorted(params.iteritems(), key=lambda d: d[0])
+    log.debug('param_list = %s' % param_list)
+    tmp_str = ''
+    for val in param_list:
+        if tmp_str:
+            tmp_str = tmp_str + '&%s=%s' % (val[0], val[1])
+        else:
+            tmp_str = '%s=%s' % (val[0], val[1])
+    return tmp_str
+
+
+def _wechatpay_gen_package(package):
+    package['notify_url'] = settings.WECHATPAY_NOTIFY_URL
+    package['partner'] = settings.WECHATPAY_PARTNERID
+    string1 = convert_params_to_str_in_order(package)
+    stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
+    log.debug('stringSignTemp = %s' % stringSignTemp)
+    md5 = hashlib.md5()
+    md5.update(stringSignTemp)
+    sign_str = md5.hexdigest().uppercase()
+    log.debug('sign = %s' % sign_str)
+    string1 = urllib.quote(string1)
+    package = string1 + '&sign=%s' % sign_str
+    return package
+
+
+def _wechatpay_app_signature(params):
+    params_str = convert_params_to_str_in_order(params)
+    sign = hashlib.sha1(params_str).hexdigest()
+    return sign
+
+
+def random_str(randomlength=8):
+    str_ = ''
+    chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
+    length = len(chars) - 1
+    random = Random()
+    for i in range(randomlength):
+        str_ += chars[random.randint(0, length)]
+    return str_
+
+
+@csrf_exempt
+def wechat_pay_notify(request):
+    if request.method != 'POST':
+        logging.error('equest.method != "POST"')
+        return HttpResponse('fail')
+    if not _wechatpay_verify_notify(request.GET):
+        return HttpResponse('fail')
+
+    log.debug(u'type trade_state = %s' % type(request.GET['trade_state']))
+
+    notify_id = request.GET['notify_id']
+    order_id = request.GET['out_trade_no']
+    log.info(u'request.GET = %s' % request.GET)
+    log.info(u'wechatpay callback, order_id: %s' % order_id)
+    log.info(u'request.body = %s' % request.body)
+
+    nid = cache.get('wechatpay_nid_' + hashlib.sha1(notify_id).hexdigest())
+    if nid:
+        log.info('duplicated notify, drop it')
+        return HttpResponse('fail')
+    body_dict = _wechatpay_xml_to_dict(request.body)
+    data = {}
+    for key, item in request.GET.items():
+        data[key] = item
+    for key, item in body_dict:
+        data[key] = item
+    data['trade_state'] = str(data['trade_state'])
+    data['total_fee'] = data['total_fee'] + (data['discount'] or 0)
+    if Charge.recharge(data, provider='wechatpay'):
+        cache.set('wechatpay_nid_' + hashlib.sha1(notify_id).hexdigest(),
+                  order_id, 90000)  # notify_id 保存25小时。
+        log.info('wechatpay callback success')
+        return HttpResponse('success')
+
+    log.info('not a valid callback, ignore')
+    return HttpResponse('fail')
+
+
+def _wechatpay_xml_to_dict(raw_str):
+    msg = {}
+    root_elem = ET.fromstring(raw_str)
+    if root_elem.tag == 'xml':
+        for child in root_elem:
+            msg[child.tag] = child.text
+        return msg
+    else:
+        return None
+
+
+def para_filter(params):
+    return {key: params[key]
+            for key in params
+            if key.lower() not in {'sign', 'sign_type'} and params[key]}
+
+
+def _wechatpay_verify_notify(params):
+    wechat_sign = params['sign']
+    log.debug('wechat_sign = %s' % wechat_sign)
+    filterParams = para_filter(params)
+    filterParams['sign_type'] = 'MD5'
+    string1 = convert_params_to_str_in_order(filterParams)
+    stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
+    log.debug('stringSignTemp = %s' % stringSignTemp)
+    md5 = hashlib.md5()
+    md5.update(stringSignTemp)
+    sign = md5.hexdigest().uppercase()
+    log.debug('sign = %s' % sign)
+    return wechat_sign == sign

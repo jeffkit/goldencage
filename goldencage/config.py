@@ -36,12 +36,18 @@ PAYMENT_MAPPING = {
                'transaction_id': 'trade_no',
                'order_id': 'out_trade_no',
                'status': 'trade_status'
-               }
+               },
+    'wechatpay': {'account': 'openid',
+                  'email': 'openid',
+                  'value': 'total_fee',
+                  'transaction_id': 'transaction_id',
+                  'order_id': 'out_trade_no',
+                  'status': 'trade_status'
+                  }
+
 }
 
-
 EXCHANGE_RATE = 25  # 一RMB对应金币数
-
 
 ALIPAY_PUBLIC_KEY = (
     '-----BEGIN PUBLIC KEY-----\n'
