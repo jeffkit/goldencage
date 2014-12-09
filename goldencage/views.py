@@ -392,6 +392,7 @@ def wechat_pay_gen_package(request):
     data['sign_method'] = 'sha1'
     data['app_signature'] = app_signature
     data['partnerid'] = settings.WECHATPAY_PARTNERID
+    data['appkey'] = settings.WECHATPAY_APPKEY
 
     log.debug(u'rsp data = %s' % data)
 
