@@ -18,8 +18,8 @@ import requests
 import simplejson as json
 from random import Random
 import time
-import xmltodict
-
+# import xmltodict
+from xml.dom import minidom
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
@@ -496,12 +496,28 @@ def wechat_pay_notify(request):
     return HttpResponse('fail')
 
 
-def _wechatpay_xml_to_dict(raw_str):
-    rsp_xml_obj = xmltodict.parse(raw_str)
-    rsp_xml_json = json.dumps(rsp_xml_obj)
-    rsp_xml_dict = json.loads(rsp_xml_json)
+def _wechatpay_xml_to_dict(content):
+    """ 只能解析一层xml，如果多层的话，最好改成用库 xmltodict
+    """
+    xml_dict = {}
+    doc = minidom.parseString(content)
+    params = [ele for ele in doc.childNodes[0].childNodes
+              if isinstance(ele, minidom.Element)]
+    for param in params:
+        if param.childNodes:
+            text = param.childNodes[0]
+            xml_dict[param.tagName] = text.data
+        else:
+            xml_dict[param.tagName] = ''
 
-    return rsp_xml_dict
+    return xml_dict
+
+# def _wechatpay_xml_to_dict(raw_str):
+#     rsp_xml_obj = xmltodict.parse(raw_str)
+#     rsp_xml_json = json.dumps(rsp_xml_obj)
+#     rsp_xml_dict = json.loads(rsp_xml_json)
+
+#     return rsp_xml_dict['xml']
 
 
 def para_filter(params):
