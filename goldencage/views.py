@@ -25,6 +25,8 @@ from goldencage.models import AppWallLog
 from goldencage.models import Charge
 from goldencage import config
 from goldencage.models import Coupon
+from goldencage.models import ChargePlan
+
 
 from wechat.official import WxApplication, WxTextResponse, WxResponse
 
@@ -333,7 +335,7 @@ def wechat(request):
 WECHATPAY_ACCESS_TOKEN_URL = 'https://api.weixin.qq.com/cgi-bin/token'
 
 
-def _wechat_pay_get_access_token():
+def wechat_pay_get_access_token():
     params = {
         'grant_type': 'client_credential',
         'appid': settings.WECHATPAY_APPID,
@@ -348,12 +350,6 @@ def _wechat_pay_get_access_token():
         return {}
     else:
         return content
-
-
-def wechat_pay_access_token(request):
-    # 7200s
-    # 7000s
-    pass
 
 
 @csrf_exempt
@@ -428,9 +424,27 @@ def convert_params_to_str_in_order_urlcode(params):
     return tmp_str.encode('utf-8')
 
 
-def _wechatpay_gen_package(package):
-    package['notify_url'] = settings.WECHATPAY_NOTIFY_URL
+def _wechatpay_gen_package(
+        package=None, body=None, out_trade_no=None,
+        total_fee=None, ip=None):
+    if not package:
+        package = {}
+    package['bank_type'] = 'WX'
+    package['body'] = body or ''
+    package['attach'] = ''
     package['partner'] = settings.WECHATPAY_PARTNERID
+    package['out_trade_no'] = out_trade_no or ''
+    package['total_fee'] = total_fee or ''
+    package['fee_type'] = 1
+    package['notify_url'] = settings.WECHATPAY_NOTIFY_URL
+    package['spbill_create_ip'] = ip or ''
+    package['time_start'] = ''
+    package['time_expire'] = ''
+    package['transport_fee'] = ''
+    package['product_fee'] = ''
+    package['goods_tag'] = ''
+    package['input_charset'] = 'GBK'
+
     string1 = convert_params_to_str_in_order(package)
     stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
     log.debug(u'stringSignTemp = %s' % stringSignTemp)
@@ -457,6 +471,96 @@ def random_str(randomlength=8):
     for i in range(randomlength):
         str_ += chars[random.randint(0, length)]
     return str_
+
+
+def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
+    plan = ChargePlan.objects.get(pk=int(planid))
+    package = _wechatpay_gen_package(
+        package=None, body=plan.name, out_trade_no=out_trade_no,
+        total_fee=plan.value, ip=client_ip)
+    noncestr = random_str(13)
+    timestamp = '%.f' % time.time()
+    sha_param = {
+        'appid': settings.WECHATPAY_APPID,
+        'appkey': settings.WECHATPAY_APPKEY,
+        'noncestr': noncestr,
+        'package': package,
+        'timestamp': timestamp,
+        'traceid': traceid}
+    app_signature = _wechatpay_app_signature(sha_param)
+    log.debug(u'app_signature = %s' % app_signature)
+
+    data = {'package': package}
+    data['appid'] = settings.WECHATPAY_APPID
+    data['noncestr'] = noncestr
+    data['traceid'] = traceid
+    data['timestamp'] = timestamp
+    data['sign_method'] = 'sha1'
+    data['app_signature'] = app_signature
+
+    log.debug(u'rsp data = %s' % data)
+
+    return data
+
+
+def wechatpay_sign_result(noncestr, prepayid, timestamp):
+    """ 要不要去掉 最后一个 &
+    """
+    raw_str = (
+        u'appid=%s&appkey=%s&noncestr=%s&package=Sign=WXPay&'
+        u'partnerid=%s&prepayid=%s&timestamp=%s&'
+        % (
+            settings.WECHATPAY_APPID,
+            settings.WECHATPAY_APPKEY,
+            noncestr,
+            settings.WECHATPAY_PARTNERID,
+            prepayid,
+            str(timestamp)
+        )
+    )
+    signResult = hashlib.sha1(raw_str).hexdigest()
+    return signResult
+
+
+def wechatpay_get_info(
+        access_token, planid,
+        out_trade_no, client_ip, traceid):
+
+    """
+    提供外部调用的接口
+    traceid 商家对用户的唯一标识,如果用微信 SSO,此处建议填写 授权用户的 openid
+    """
+
+    data = wechatpay_prepayid_params(
+        planid, out_trade_no, client_ip, traceid)
+
+    params = {
+        'access_token': access_token
+    }
+    url = 'https://api.weixin.qq.com/pay/genprepay'
+    headers = {
+        'content-type': 'application/json'
+    }
+    post_data = json.dumps(data)
+    rsp = requests.post(url, params=params, data=post_data, headers=headers)
+    content = json.loads(rsp.content)
+    if content['errcode'] != 0:
+        log.error(content['errmsg'])
+        return None
+    signResult = wechatpay_sign_result(
+        data['noncestr'],
+        content['prepayid'],
+        data['timestamp'])
+
+    wechatpay_data = {}
+    wechatpay_data['partnerid'] = settings.WECHATPAY_PARTNERID
+    wechatpay_data['prapayid'] = content['prepayid']
+    wechatpay_data['package'] = data['package']
+    wechatpay_data['noncestr'] = data['noncestr']
+    wechatpay_data['timestamp'] = data['timestamp']
+    wechatpay_data['sign'] = signResult
+
+    return wechatpay_data
 
 
 @csrf_exempt
@@ -513,13 +617,6 @@ def _wechatpay_xml_to_dict(content):
             xml_dict[param.tagName] = ''
 
     return xml_dict
-
-# def _wechatpay_xml_to_dict(raw_str):
-#     rsp_xml_obj = xmltodict.parse(raw_str)
-#     rsp_xml_json = json.dumps(rsp_xml_obj)
-#     rsp_xml_dict = json.loads(rsp_xml_json)
-
-#     return rsp_xml_dict['xml']
 
 
 def para_filter(params):
