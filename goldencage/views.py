@@ -426,14 +426,14 @@ def wechat_pay_gen_package(request):
 
 def convert_params_to_str_in_order(params, urlencode=False):
     param_list = sorted(params.iteritems(), key=lambda d: d[0])
-    log.debug('param_list = %s' % param_list)
+    # log.debug('param_list = %s' % param_list)
     tmp_str = u''
     for val in param_list:
         vall = u'%s' % val[1]
         if urlencode:
             vall = vall.encode('utf-8')
             vall = urllib.quote(vall)
-        log.debug('vall = %s' % vall)
+        # log.debug('vall = %s' % vall)
         if tmp_str:
             append_str = u'&%s=%s' % (val[0], vall)
             tmp_str = tmp_str + append_str
@@ -448,24 +448,25 @@ def _wechatpay_gen_package(
     if not package:
         package = {}
     package['bank_type'] = 'WX'
-    package['body'] = body or ''
-    package['attach'] = ''
+    package['body'] = body or package.get('body') or ''
+    # package['attach'] = ''
     package['partner'] = settings.WECHATPAY_PARTNERID
-    package['out_trade_no'] = out_trade_no or ''
-    package['total_fee'] = total_fee or ''
+    package['out_trade_no'] = out_trade_no or package.get('out_trade_no') or ''
+    package['total_fee'] = total_fee or package.get('total_fee') or ''
     package['fee_type'] = 1
     package['notify_url'] = settings.WECHATPAY_NOTIFY_URL
-    package['spbill_create_ip'] = ip or ''
-    package['time_start'] = ''
-    package['time_expire'] = ''
-    package['transport_fee'] = ''
-    package['product_fee'] = ''
-    package['goods_tag'] = ''
+    package['spbill_create_ip'] = ip or package.get('spbill_create_ip') or ''
+    # package['time_start'] = ''
+    # package['time_expire'] = ''
+    # package['transport_fee'] = ''
+    # package['product_fee'] = ''
+    # package['goods_tag'] = ''
     package['input_charset'] = 'GBK'
 
     string1 = convert_params_to_str_in_order(package)
     stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
-    log.debug(u'stringSignTemp = %s' % stringSignTemp)
+    log.debug(type(stringSignTemp))
+    log.debug('stringSignTemp = %s' % stringSignTemp)
     md5 = hashlib.md5()
     md5.update(stringSignTemp)
     sign_str = md5.hexdigest().upper()
@@ -536,6 +537,7 @@ def wechatpay_sign_result(noncestr, prepayid, timestamp):
             str(timestamp)
         )
     )
+    log.debug('raw_str = %s' % raw_str)
     signResult = hashlib.sha1(raw_str).hexdigest()
     return signResult
 
@@ -564,7 +566,7 @@ def wechatpay_get_info(
     content = json.loads(rsp.content)
     if content['errcode'] != 0:
         log.error(content['errmsg'])
-        return None
+        return None, content['errcode']
     signResult = wechatpay_sign_result(
         data['noncestr'],
         content['prepayid'],
@@ -578,7 +580,8 @@ def wechatpay_get_info(
     wechatpay_data['timestamp'] = data['timestamp']
     wechatpay_data['sign'] = signResult
 
-    return wechatpay_data
+    log.info('wechatpay_data = %s' % wechatpay_data)
+    return wechatpay_data, None
 
 
 @csrf_exempt

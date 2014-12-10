@@ -641,9 +641,23 @@ class WechatpayTest(TestCase):
                 <IsSubscribe>1</IsSubscribe>
                 <TimeStamp> 1369743511</TimeStamp>
                 <NonceStr><![CDATA[jALldRTHAFd5Tgs5]]></NonceStr>
-                <AppSignature><![CDATA[bafe07f060f22dcda0bfdb4b5ff756f973aecffa]]>
+                <AppSignature><![CDATA[bafe07f060fdb4b5ff756f973aecffa]]>
                 </AppSignature>
                 <SignMethod><![CDATA[sha1]]></SignMethod >
             </xml>""")
         dict_ret = _wechatpay_xml_to_dict(raw_str)
         print dict_ret
+
+    def test_wechatpay_get_info(self):
+        plan = ChargePlan()
+        plan.name = u'商品商品'
+        plan.value = 10000
+        plan.cost = 100
+        plan.save()
+
+        from goldencage.views import wechat_pay_get_access_token
+        from goldencage.views import wechatpay_get_info
+        content = wechat_pay_get_access_token()
+        access_token = content['access_token']
+        data, err = wechatpay_get_info(
+            access_token, plan.id, '123321', '127.0.0.1', 'traceiddd')
