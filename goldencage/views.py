@@ -395,35 +395,6 @@ def wechat_pay_gen_package(request):
     return rsp(data)
 
 
-# def convert_params_to_str_in_order(params):
-#     param_list = sorted(params.iteritems(), key=lambda d: d[0])
-#     log.debug(u'param_list = %s' % param_list)
-#     tmp_str = u''
-#     for val in param_list:
-#         if tmp_str:
-#             tmp_str = tmp_str + '&%s=%s' % (val[0], val[1])
-#         else:
-#             tmp_str = '%s=%s' % (val[0], val[1])
-#     return tmp_str.encode('utf-8')
-
-
-# def convert_params_to_str_in_order_urlcode(params):
-#     param_list = sorted(params.iteritems(), key=lambda d: d[0])
-#     log.debug('param_list = %s' % param_list)
-#     tmp_str = u''
-#     for val in param_list:
-#         vall = u'%s' % val[1]
-#         vall = vall.encode('utf-8')
-#         log.debug('vall = %s' % vall)
-#         vall = urllib.quote(vall)
-#         if tmp_str:
-#             append_str = u'&%s=%s' % (val[0], vall)
-#             tmp_str = tmp_str + append_str
-#         else:
-#             tmp_str = u'%s=%s' % (val[0], vall)
-#     return tmp_str.encode('utf-8')
-
-
 def convert_params_to_str_in_order(params, urlencode=False):
     param_list = sorted(params.iteritems(), key=lambda d: d[0])
     # log.debug('param_list = %s' % param_list)
