@@ -574,7 +574,7 @@ def wechatpay_get_info(
 
     wechatpay_data = {}
     wechatpay_data['partnerid'] = settings.WECHATPAY_PARTNERID
-    wechatpay_data['prapayid'] = content['prepayid']
+    wechatpay_data['prepayid'] = content['prepayid']
     wechatpay_data['package'] = data['package']
     wechatpay_data['noncestr'] = data['noncestr']
     wechatpay_data['timestamp'] = data['timestamp']
