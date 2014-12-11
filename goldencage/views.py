@@ -498,7 +498,7 @@ def wechatpay_sign_result(noncestr, prepayid, timestamp):
     """
     raw_str = (
         u'appid=%s&appkey=%s&noncestr=%s&package=Sign=WXPay&'
-        u'partnerid=%s&prepayid=%s&timestamp=%s&'
+        u'partnerid=%s&prepayid=%s&timestamp=%s'
         % (
             settings.WECHATPAY_APPID,
             settings.WECHATPAY_APPKEY,
