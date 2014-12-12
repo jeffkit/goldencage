@@ -519,7 +519,6 @@ def wechatpay_sign_result(noncestr, prepayid, timestamp):
 def wechatpay_get_info(
         access_token, planid,
         out_trade_no, client_ip, traceid):
-
     """
     提供外部调用的接口
     traceid 商家对用户的唯一标识,如果用微信 SSO,此处建议填写 授权用户的 openid
@@ -585,7 +584,10 @@ def wechat_pay_notify(request):
         data[key] = item
     for key, item in body_dict.iteritems():
         data[key] = item
-    data['trade_state'] = str(data['trade_state'])
+    if str(data['trade_state']) == '0':
+        # 兼容支付宝
+        data['trade_state'] = 'TRADE_FINISHED'
+    # data['trade_state'] = str(data['trade_state'])
     data['total_fee'] = data['total_fee']
     log.debug(u'Charge.recharge data = %s' % data)
     if Charge.recharge(data, provider='wechatpay'):
