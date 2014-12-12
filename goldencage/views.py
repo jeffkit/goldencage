@@ -341,6 +341,7 @@ def wechat_pay_get_access_token():
         'appid': settings.WECHATPAY_APPID,
         'secret': settings.WECHATPAY_SECRET
     }
+    log.debug('params = %s' % params)
     rsp = requests.get(WECHATPAY_ACCESS_TOKEN_URL, params=params)
     content = json.loads(rsp.content)
     errcode = content.get('errcode')
@@ -404,7 +405,6 @@ def convert_params_to_str_in_order(params, urlencode=False):
         if urlencode:
             vall = vall.encode('utf-8')
             vall = urllib.quote(vall)
-        # log.debug('vall = %s' % vall)
         if tmp_str:
             append_str = u'&%s=%s' % (val[0], vall)
             tmp_str = tmp_str + append_str
@@ -483,7 +483,7 @@ def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
     app_signature = _wechatpay_app_signature(sha_param)
     log.debug(u'app_signature = %s' % app_signature)
 
-    data = {'package': 'Sign=WXPay'}
+    data = {'package': package}
     data['appid'] = settings.WECHATPAY_APPID
     data['noncestr'] = noncestr
     data['traceid'] = traceid
@@ -550,7 +550,7 @@ def wechatpay_get_info(
     wechatpay_data['partnerid'] = settings.WECHATPAY_PARTNERID
     wechatpay_data['prepayid'] = content['prepayid']
     wechatpay_data['appid'] = settings.WECHATPAY_APPID
-    wechatpay_data['package'] = data['package']
+    wechatpay_data['package'] = 'Sign=WXPay'
     wechatpay_data['noncestr'] = data['noncestr']
     wechatpay_data['timestamp'] = data['timestamp']
     wechatpay_data['sign'] = signResult

@@ -658,6 +658,8 @@ class WechatpayTest(TestCase):
         from goldencage.views import wechat_pay_get_access_token
         from goldencage.views import wechatpay_get_info
         content = wechat_pay_get_access_token()
-        access_token = content['access_token']
+        access_token = content.get('access_token')
+        if not access_token:
+            print content
         data, err = wechatpay_get_info(
             access_token, plan.id, '123321', '127.0.0.1', 'traceiddd')
