@@ -631,6 +631,6 @@ def _wechatpay_verify_notify(params):
     log.debug(u'stringSignTemp = %s' % stringSignTemp)
     md5 = hashlib.md5()
     md5.update(stringSignTemp)
-    sign = md5.hexdigest().uppercase()
+    sign = md5.hexdigest().upper()
     log.debug(u'sign = %s' % sign)
     return wechat_sign == sign
