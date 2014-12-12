@@ -432,7 +432,7 @@ def _wechatpay_gen_package(
     # package['transport_fee'] = ''
     # package['product_fee'] = ''
     # package['goods_tag'] = ''
-    package['input_charset'] = 'GBK'
+    package['input_charset'] = 'UTF-8'
 
     string1 = convert_params_to_str_in_order(package)
     stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_PARTNERKEY
@@ -465,9 +465,12 @@ def random_str(randomlength=8):
 
 def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
     plan = ChargePlan.objects.get(pk=int(planid))
+    # package = _wechatpay_gen_package(
+    #     package=None, body=plan.name, out_trade_no=out_trade_no,
+    #     total_fee=plan.value, ip=client_ip)
     package = _wechatpay_gen_package(
         package=None, body=plan.name, out_trade_no=out_trade_no,
-        total_fee=plan.value, ip=client_ip)
+        total_fee=1, ip=client_ip)
     noncestr = random_str(13)
     timestamp = '%.f' % time.time()
     sha_param = {
@@ -583,7 +586,7 @@ def wechat_pay_notify(request):
     for key, item in body_dict:
         data[key] = item
     data['trade_state'] = str(data['trade_state'])
-    data['total_fee'] = data['total_fee'] + (data['discount'] or 0)
+    data['total_fee'] = data['total_fee']
     log.debug(u'Charge.recharge data = %s' % data)
     if Charge.recharge(data, provider='wechatpay'):
         cache.set('wechatpay_nid_' + hashlib.sha1(notify_id).hexdigest(),
