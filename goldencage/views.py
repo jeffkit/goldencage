@@ -465,12 +465,12 @@ def random_str(randomlength=8):
 
 def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
     plan = ChargePlan.objects.get(pk=int(planid))
-    # package = _wechatpay_gen_package(
-    #     package=None, body=plan.name, out_trade_no=out_trade_no,
-    #     total_fee=plan.value, ip=client_ip)
     package = _wechatpay_gen_package(
         package=None, body=plan.name, out_trade_no=out_trade_no,
-        total_fee=1, ip=client_ip)
+        total_fee=plan.value, ip=client_ip)
+    # package = _wechatpay_gen_package(
+    #     package=None, body=plan.name, out_trade_no=out_trade_no,
+    #     total_fee=1, ip=client_ip)
     noncestr = random_str(13)
     timestamp = '%.f' % time.time()
     sha_param = {
