@@ -583,7 +583,7 @@ def wechat_pay_notify(request):
     data = {}
     for key, item in request.GET.items():
         data[key] = item
-    for key, item in body_dict:
+    for key, item in body_dict.iteritems():
         data[key] = item
     data['trade_state'] = str(data['trade_state'])
     data['total_fee'] = data['total_fee']

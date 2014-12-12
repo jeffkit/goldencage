@@ -37,12 +37,12 @@ PAYMENT_MAPPING = {
                'order_id': 'out_trade_no',
                'status': 'trade_status'
                },
-    'wechatpay': {'account': 'openid',
-                  'email': 'openid',
+    'wechatpay': {'account': 'OpenId',
+                  'email': 'OpenId',
                   'value': 'total_fee',
                   'transaction_id': 'transaction_id',
                   'order_id': 'out_trade_no',
-                  'status': 'trade_status'
+                  'status': 'trade_state'
                   }
 
 }

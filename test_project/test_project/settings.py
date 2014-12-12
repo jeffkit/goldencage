@@ -149,6 +149,7 @@ WECHATPAY_NOTIFY_URL = 'http://www.baidu.com/'
 WECHATPAY_PARTNERKEY = '12232'
 WECHATPAY_PARTNERID = '32323'  # 商户号
 
+
 try:
     from xsettings import *
 except:

@@ -663,3 +663,21 @@ class WechatpayTest(TestCase):
             print content
         data, err = wechatpay_get_info(
             access_token, plan.id, '123321', '127.0.0.1', 'traceiddd')
+
+    def test_wechatpay_notify(self):
+        body = """
+        <xml><OpenId><![CDATA[oaCDJju5TzPSv0ZT_GP5nLsPAQfY]]></OpenId>
+<AppId><![CDATA[wx6745aaa6e2878f99]]></AppId>
+<IsSubscribe>0</IsSubscribe>
+<TimeStamp>1418365289</TimeStamp>
+<NonceStr><![CDATA[kLI9t3MWRx4RYZVu]]></NonceStr>
+<AppSignature><![CDATA[16d03d4341d62a3d635c7593cc84eb1554c36205]]></AppSignature>
+<SignMethod><![CDATA[sha1]]></SignMethod>
+</xml>
+        """
+
+        params = 'bank_billno=201412126100895338&bank_type=3006&discount=0&fee_type=1&input_charset=UTF-8&notify_id=epFRTtDSAK6AGztmmEb5cOpCQCzg06fiAj8D9w6l_0VbjHy2_6NnDpKIs5un-g5TJTsCCDC1ZA8jFy3WY2VV1nWNYehhK-Tg&out_trade_no=1115&partner=1222813501&product_fee=1&sign=6265C0C62683BE1F5F7C6D688A25CD00&sign_type=MD5&time_end=20141212142129&total_fee=1&trade_mode=1&trade_state=0&transaction_id=1222813501201412126039873136&transport_fee=0'
+        url = '/gc/wechatcb/?%s' % params
+        cli = Client()
+        rsp = cli.post(url, data=body, content_type='application/xml')
+        print rsp.content
