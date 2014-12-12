@@ -619,6 +619,13 @@ class WechatTestCase(TestCase):
 @skipIfCustomUser
 class WechatpayTest(TestCase):
 
+    def setUp(self):
+        self.user = User.objects.create_user('jeff',
+                                             'jeff@toraysoft.com', '123')
+        self.plan = ChargePlan(name=u'plan1', code='plan1',
+                               value=30, cost=750, coupon=50)
+        self.plan.save()
+
     def test_gen_package(self):
         cli = Client()
         package = {'bank_type': 'WX', 'body': '千足 金箍棒',
@@ -665,6 +672,9 @@ class WechatpayTest(TestCase):
             access_token, plan.id, '123321', '127.0.0.1', 'traceiddd')
 
     def test_wechatpay_notify(self):
+        order = Order(id=1115, user=self.user, plan=self.plan, value=30)
+        order.save()
+
         body = """
         <xml><OpenId><![CDATA[oaCDJju5TzPSv0ZT_GP5nLsPAQfY]]></OpenId>
 <AppId><![CDATA[wx6745aaa6e2878f99]]></AppId>
@@ -680,4 +690,5 @@ class WechatpayTest(TestCase):
         url = '/gc/wechatcb/?%s' % params
         cli = Client()
         rsp = cli.post(url, data=body, content_type='application/xml')
+        print '+++++++++++++++++'
         print rsp.content
