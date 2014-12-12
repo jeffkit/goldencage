@@ -483,7 +483,7 @@ def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
     app_signature = _wechatpay_app_signature(sha_param)
     log.debug(u'app_signature = %s' % app_signature)
 
-    data = {'package': package}
+    data = {'package': 'Sign=WXPay'}
     data['appid'] = settings.WECHATPAY_APPID
     data['noncestr'] = noncestr
     data['traceid'] = traceid
