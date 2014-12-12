@@ -584,10 +584,7 @@ def wechat_pay_notify(request):
         data[key] = item
     for key, item in body_dict.iteritems():
         data[key] = item
-    if str(data['trade_state']) == '0':
-        # 兼容支付宝
-        data['trade_state'] = 'TRADE_FINISHED'
-    # data['trade_state'] = str(data['trade_state'])
+    data['trade_state'] = str(data['trade_state'])
     data['total_fee'] = data['total_fee']
     log.debug(u'Charge.recharge data = %s' % data)
     if Charge.recharge(data, provider='wechatpay'):

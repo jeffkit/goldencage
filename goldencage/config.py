@@ -44,7 +44,10 @@ PAYMENT_MAPPING = {
                   'order_id': 'out_trade_no',
                   'status': 'trade_state'
                   }
-
+}
+PAYMENT_FINISH = {
+    'alipay': 'TRADE_FINISHED',
+    'wechatpay': '0',
 }
 
 EXCHANGE_RATE = 25  # 一RMB对应金币数
