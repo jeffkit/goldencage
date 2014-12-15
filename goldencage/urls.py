@@ -9,4 +9,8 @@ urlpatterns = patterns(
     url(r'^alipaycb/$', 'alipay_callback', name='alipay_cb'),
     url(r'^alipaysign/$', 'alipay_sign', name='alipaysign'),
     url(r'^wechat/$', 'wechat', name='wechat'),
+    url(r'^wechatpaypackage/$',
+        'wechat_pay_gen_package', name='wechat_pay_gen_package'),
+    url(r'^wechatcb/$',
+        'wechat_pay_notify', name='wechat_pay_notify'),
 )
