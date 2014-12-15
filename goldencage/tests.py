@@ -33,6 +33,7 @@ from goldencage.models import Exchange
 
 @skipIfCustomUser
 class CouponModelTest(TestCase):
+
     """测试优惠券生成与验证。
     生成：
     - 如果有次数限制
@@ -613,3 +614,81 @@ class WechatTestCase(TestCase):
         </xml>"""
         rsp = self.request_content(xml)
         self.assertIn('无效的兑换码,或已被兑换过。', rsp)
+
+
+@skipIfCustomUser
+class WechatpayTest(TestCase):
+
+    def setUp(self):
+        self.user = User.objects.create_user('jeff',
+                                             'jeff@toraysoft.com', '123')
+        self.plan = ChargePlan(name=u'plan1', code='plan1',
+                               value=30, cost=750, coupon=50)
+        self.plan.save()
+
+    def test_gen_package(self):
+        cli = Client()
+        package = {'bank_type': 'WX', 'body': '千足 金箍棒',
+                   'fee_type': '1', 'input_charset': 'UTF-8',
+                   'getOutTradNo': '81282373272',
+                   'spbill_create_ip': '192.168.1.1', 'total_fee': '1'}
+        data = {'traceid': 'ikaoiaos', 'package': package}
+        data = json.dumps(data)
+        print 'data = %s' % data
+        rsp = cli.post('/gc/wechatpaypackage/',
+                       data=data, content_type='application/json')
+        print rsp.content
+
+    def test_xml_to_dict(self):
+        from .views import _wechatpay_xml_to_dict
+        raw_str = ("""
+            <xml>
+                <OpenId><![CDATA[111222]]></OpenId>
+                <AppId><![CDATA[wwwwb4f85f3a797777]]></AppId>
+                <IsSubscribe>1</IsSubscribe>
+                <TimeStamp> 1369743511</TimeStamp>
+                <NonceStr><![CDATA[jALldRTHAFd5Tgs5]]></NonceStr>
+                <AppSignature><![CDATA[bafe07f060fdb4b5ff756f973aecffa]]>
+                </AppSignature>
+                <SignMethod><![CDATA[sha1]]></SignMethod >
+            </xml>""")
+        dict_ret = _wechatpay_xml_to_dict(raw_str)
+        print dict_ret
+
+    def test_wechatpay_get_info(self):
+        plan = ChargePlan()
+        plan.name = u'商品商品'
+        plan.value = 10000
+        plan.cost = 100
+        plan.save()
+
+        from goldencage.views import wechat_pay_get_access_token
+        from goldencage.views import wechatpay_get_info
+        content = wechat_pay_get_access_token()
+        access_token = content.get('access_token')
+        if not access_token:
+            print content
+        data, err = wechatpay_get_info(
+            access_token, plan.id, '123321', '127.0.0.1', 'traceiddd')
+
+    def test_wechatpay_notify(self):
+        order = Order(id=1115, user=self.user, plan=self.plan, value=30)
+        order.save()
+
+        body = """
+        <xml><OpenId><![CDATA[oaCDJju5TzPSv0ZT_GP5nLsPAQfY]]></OpenId>
+<AppId><![CDATA[wx6745aaa6e2878f99]]></AppId>
+<IsSubscribe>0</IsSubscribe>
+<TimeStamp>1418365289</TimeStamp>
+<NonceStr><![CDATA[kLI9t3MWRx4RYZVu]]></NonceStr>
+<AppSignature><![CDATA[16d03d4341d62a3d635c7593cc84eb1554c36205]]></AppSignature>
+<SignMethod><![CDATA[sha1]]></SignMethod>
+</xml>
+        """
+
+        params = 'bank_billno=201412126100895338&bank_type=3006&discount=0&fee_type=1&input_charset=UTF-8&notify_id=epFRTtDSAK6AGztmmEb5cOpCQCzg06fiAj8D9w6l_0VbjHy2_6NnDpKIs5un-g5TJTsCCDC1ZA8jFy3WY2VV1nWNYehhK-Tg&out_trade_no=1115&partner=1222813501&product_fee=1&sign=6265C0C62683BE1F5F7C6D688A25CD00&sign_type=MD5&time_end=20141212142129&total_fee=1&trade_mode=1&trade_state=0&transaction_id=1222813501201412126039873136&transport_fee=0'
+        url = '/gc/wechatcb/?%s' % params
+        cli = Client()
+        rsp = cli.post(url, data=body, content_type='application/xml')
+        print '+++++++++++++++++'
+        print rsp.content
