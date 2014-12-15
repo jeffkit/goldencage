@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 from django.db import models
 from django.db import IntegrityError
 from django.conf import settings
@@ -232,6 +232,9 @@ class Charge(models.Model):
 
         unique_together = (('platform', 'transaction_id'),)
 
+    def is_finish(self):
+        return self.status == config.PAYMENT_FINISH[self.platform]
+
     @classmethod
     def recharge(cls, data, provider):
 
@@ -272,12 +275,12 @@ class Charge(models.Model):
             if result.status == chg.status:
                 return None
             else:
-                if result.status == 'TRADE_FINISHED':
+                if result.is_finish():
                     # 已经完毕，这条旧通知是来晚了。忽略掉
                     return result
 
                 # 还没完结，继续修改状态。
-                if chg.status == 'TRADE_FINISHED':
+                if chg.is_finish():
                     result.valid = True
                     dispatch_signal(result.cost, result.user, plan, order)
                 # 更新状态
@@ -286,15 +289,21 @@ class Charge(models.Model):
                 return result
         else:
             try:
-                chg.save()
-                if chg.status == 'TRADE_FINISHED':
+                if chg.is_finish():
+                    chg.valid = True
+                    chg.save()
                     dispatch_signal(chg.cost, chg.user, plan, order)
+                else:
+                    # 怕signal的connect方出了错, 写两个save吧
+                    chg.save()
+
                 return chg
             except IntegrityError:
                 return None
 
 
 class Coupon(models.Model):
+
     """优惠券，用于各种活动兑换金币用。
     """
     name = models.CharField(u'名称', max_length=50)
@@ -311,7 +320,7 @@ class Coupon(models.Model):
     limit = models.IntegerField(u'每个限制次数', default=1,
                                 help_text=u'值为0时不限')
 
-    def generate(self,  user, default=None):
+    def generate(self, user, default=None):
         """为用户生成一张优惠券,
         """
 
@@ -365,6 +374,7 @@ class Coupon(models.Model):
 
 
 class Exchange(models.Model):
+
     """优惠券兑换纪录
     """
     coupon = models.ForeignKey(Coupon, verbose_name=u'优惠券')
