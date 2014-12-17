@@ -50,6 +50,11 @@ PAYMENT_FINISH = {
     'wechatpay': '0',
 }
 
+PAYMENT_SCALE = {
+    'alipay': 100,
+    'wechatpay': 1,
+}
+
 EXCHANGE_RATE = 25  # 一RMB对应金币数
 
 ALIPAY_PUBLIC_KEY = (

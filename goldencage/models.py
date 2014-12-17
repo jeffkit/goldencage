@@ -235,6 +235,9 @@ class Charge(models.Model):
     def is_finish(self):
         return self.status == config.PAYMENT_FINISH[self.platform]
 
+    def value_in_cent(self, value):
+        return int(value * config.PAYMENT_SCALE[self.platform])
+
     @classmethod
     def recharge(cls, data, provider):
 
@@ -258,7 +261,7 @@ class Charge(models.Model):
         for key, value in mapping.iteritems():
             value = data[value]
             if key == 'value':
-                value = int(float(value) * 100)
+                value = chg.value_in_cent(float(value))
             setattr(chg, key, value)
         chg.extra_data = data
 
