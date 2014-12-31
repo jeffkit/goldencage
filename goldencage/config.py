@@ -27,6 +27,12 @@ APPWALLLOG_MAPPING = {
                     'product_id': 'pack_name',
                     'product_name': 'ad_name',
                     },
+    'qumi': {'identity': 'order',
+             'cost': 'points',
+             'user_id': 'user',
+             'product_id': 'ad',
+             'product_name': 'ad',
+        },
 }
 
 PAYMENT_MAPPING = {
@@ -48,6 +54,11 @@ PAYMENT_MAPPING = {
 PAYMENT_FINISH = {
     'alipay': 'TRADE_FINISHED',
     'wechatpay': '0',
+}
+
+PAYMENT_SCALE = {
+    'alipay': 100,
+    'wechatpay': 1,
 }
 
 EXCHANGE_RATE = 25  # 一RMB对应金币数
