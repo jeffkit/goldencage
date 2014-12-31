@@ -152,7 +152,7 @@ def qumi_callback(request):
         log[key] = request.GET[key]
     src = '||'.join([log[key] for key in
                      ('order', 'app', 'ad', 'user', 'device',
-                      'points', 'time')])
+                      'points', 'time')]).encode('utf-8')
     md5 = hashlib.md5()
     md5.update(settings.GOLDENCAGE_QUMI_SECRET + '||' + src)
     _sig = md5.hexdigest()[8:24]
