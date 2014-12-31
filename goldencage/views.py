@@ -635,9 +635,9 @@ def _wechatpay_xml_to_dict(content):
 
 
 def para_filter(params):
-    return {key: params[key]
-            for key in params
-            if key.lower() not in {'sign', 'sign_type'} and params[key]}
+    return dict([(key, params[key])
+                 for key in params
+                 if key.lower() not in ['sign', 'sign_type'] and params[key]])
 
 
 def _wechatpay_verify_notify(params):
