@@ -27,6 +27,12 @@ APPWALLLOG_MAPPING = {
                     'product_id': 'pack_name',
                     'product_name': 'ad_name',
                     },
+    'qumi': {'identity': 'order',
+             'cost': 'points',
+             'user_id': 'user',
+             'product_id': 'ad',
+             'product_name': 'ad',
+        },
 }
 
 PAYMENT_MAPPING = {
