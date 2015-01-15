@@ -104,7 +104,8 @@ class AppWallLog(models.Model):
                                 choices=(('youmi_ios', u'有米iOS'),
                                          ('youmi_adr', u'有米Android'),
                                          ('waps', u'万普'),
-                                         ('dianjoy_adr', u'点乐')))
+                                         ('dianjoy_adr', u'点乐'),
+                                         ('qumi', u'趣米')))
     identity = models.CharField(max_length=100)
     cost = models.IntegerField()
     product_id = models.CharField(max_length=100)
