@@ -164,12 +164,33 @@ def qumi_callback(request):
         return HttpResponse('OK, But Duplicated item')
 
 
+def qumi_callback_android(request):
+    sig = request.GET.get('sig')
+    log = {}
+    for key in request.GET.keys():
+        log[key] = request.GET[key]
+    src = '||'.join([log[key] for key in
+                     ('order', 'app', 'ad', 'user', 'device',
+                      'points', 'time')]).encode('utf-8')
+    md5 = hashlib.md5()
+    md5.update(settings.GOLDENCAGE_QUMI_SECRET_ANDROID + '||' + src)
+    _sig = md5.hexdigest()[8:24]
+    if sig != _sig:
+        return HttpResponseForbidden('sig error')
+
+    if AppWallLog.log(log, provider='qumi'):
+        return HttpResponse('OK')
+    else:
+        return HttpResponse('OK, But Duplicated item')
+
+
 def appwall_callback(request, provider):
     return {'waps': waps_callback,
             'youmi_ios': youmi_callback_ios,
             'youmi_adr': youmi_callback_adr,
             'dianjoy_adr': dianjoy_callback_adr,
             'qumi': qumi_callback,
+            'qumi_adr': qumi_callback_android,
             }[provider](request)
 
 alipay_public_key = config.ALIPAY_PUBLIC_KEY
