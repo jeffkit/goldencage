@@ -178,7 +178,7 @@ def qumi_callback_android(request):
     if sig != _sig:
         return HttpResponseForbidden('sig error')
 
-    if AppWallLog.log(log, provider='qumi'):
+    if AppWallLog.log(log, provider='qumi_adr'):
         return HttpResponse('OK')
     else:
         return HttpResponse('OK, But Duplicated item')

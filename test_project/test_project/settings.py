@@ -28,9 +28,16 @@ TEMPLATE_DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# 有米
 YOUMI_CALLBACK_SECRET = 'youmikey'
+YOUMI_CALLBACK_SECRET_ADR = 'youmi_android_secret'
 
+# 点乐
 GOLDENCAGE_DIANJOY_ANDROID_SECRET = 'dianjoykey'
+
+# 趣米
+GOLDENCAGE_QUMI_SECRET = 'qumi'
+GOLDENCAGE_QUMI_SECRET_ANDROID = 'qumi_android'
 
 
 # Application definition
@@ -154,4 +161,3 @@ try:
     from xsettings import *
 except:
     pass
-
