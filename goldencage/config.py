@@ -70,7 +70,7 @@ PAYMENT_FINISH = {
 PAYMENT_SCALE = {
     'alipay': 100,
     'wechatpay': 1,
-    'wechatmppay': 100,
+    'wechatmppay': 1,
 }
 
 EXCHANGE_RATE = 25  # 一RMB对应金币数
