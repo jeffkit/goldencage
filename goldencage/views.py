@@ -776,6 +776,7 @@ def wechat_mp_pay_notify(request):
     """
     rsp_fail = {'return_code': 'FAIL'}
     if request.method != 'POST':
+        log.debug(dicttoxml(rsp_fail))
         logging.error('equest.method != "POST"')
         return HttpResponse(dicttoxml(rsp_fail))
 
