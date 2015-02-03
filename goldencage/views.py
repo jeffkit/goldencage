@@ -767,7 +767,6 @@ def wechatpay_mp_sign(data):
     md5.update(stringSignTemp)
     sign_str = md5.hexdigest().upper()
     log.debug(u'sign = %s' % sign_str)
-
     return sign_str
 
 
