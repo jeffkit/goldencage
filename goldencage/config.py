@@ -67,6 +67,8 @@ PAYMENT_FINISH = {
     'wechatmppay': 'SUCCESS'
 }
 
+# 支付宝 1total_fee等于1蚊
+# 微信支付和微信公众号支付 1total_fee等于1分
 PAYMENT_SCALE = {
     'alipay': 100,
     'wechatpay': 1,

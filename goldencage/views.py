@@ -676,34 +676,10 @@ def _wechatpay_verify_notify(params):
     return wechat_sign == sign
 
 
-# def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
-#     plan = ChargePlan.objects.get(pk=int(planid))
-#     package = _wechatpay_gen_package(
-#         package=None, body=plan.name, out_trade_no=out_trade_no,
-#         total_fee=plan.value, ip=client_ip)
-#     noncestr = random_str(13)
-#     timestamp = '%.f' % time.time()
-#     sha_param = {
-#         'appid': settings.WECHATPAY_APPID,
-#         'appkey': settings.WECHATPAY_APPKEY,
-#         'noncestr': noncestr,
-#         'package': package,
-#         'timestamp': timestamp,
-#         'traceid': traceid}
-#     app_signature = _wechatpay_app_signature(sha_param)
-#     log.debug(u'app_signature = %s' % app_signature)
-
-#     data = {'package': package}
-#     data['appid'] = settings.WECHATPAY_APPID
-#     data['noncestr'] = noncestr
-#     data['traceid'] = traceid
-#     data['timestamp'] = timestamp
-#     data['sign_method'] = 'sha1'
-#     data['app_signature'] = app_signature
-
-#     log.debug(u'rsp data = %s' % data)
-
-#     return data
+###############################################################################
+###############################################################################
+###############################################################################
+# 公众号支付
 
 
 def wechatpay_mp_get_info(
@@ -716,12 +692,12 @@ def wechatpay_mp_get_info(
     """
     if trade_type == 'JSAPI' and not openid:
         log.error(u'trade_type = %s, openid = %s' % (trade_type, openid))
-        return ''
+        return None, 'need openid'
     if trade_type == 'NATIVE' and not product_id:
         log.error(
             u'trade_type = %s, product_id = %s' % (trade_type, product_id)
         )
-        return ''
+        return None, 'need product_id'
 
     plan = ChargePlan.objects.get(pk=int(planid))
 
@@ -796,7 +772,8 @@ def wechat_mp_pay_notify(request):
     if not wechat_mp_pay_verify(req_dict):
         return HttpResponse(dicttoxml(rsp_fail))
     try:
-        cache_key = 'wechat_mp_pay_nid_' + hashlib.sha1(transaction_id).hexdigest()
+        cache_key = 'wechat_mp_pay_nid_' + \
+            hashlib.sha1(transaction_id).hexdigest()
         nid = cache.get(cache_key)
         if nid:
             log.info(u'duplicated notify, drop it')
@@ -824,4 +801,7 @@ def wechat_mp_pay_verify(data):
     log.debug('sign    = %s' % sign)
     log.debug('my_sign = %s' % my_sign)
 
-    return True
+    if sign == my_sign:
+        return True
+    else:
+        return False
