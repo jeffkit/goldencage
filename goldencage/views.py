@@ -752,6 +752,8 @@ def wechatpay_mp_get_info(
     log.debug('content = %s' % content)
     if content['return_code'] != 'SUCCESS':
         return None, content['return_msg']
+    if content['result_code'] != 'SUCCESS':
+        return None, content['err_code_des']
     else:
         return content['prepay_id'], None
 
@@ -808,4 +810,13 @@ def wechat_mp_pay_notify(request):
 
 
 def wechat_mp_pay_verify(data):
+    sign = data['sign']
+    tmp_dict = {}
+    for key, value in data.iteritems():
+        if value and key != 'sign':
+            tmp_dict[key] = value
+    my_sign = wechatpay_mp_sign(tmp_dict)
+    log.debug('sign    = %s' % sign)
+    log.debug('my_sign = %s' % my_sign)
+
     return True
