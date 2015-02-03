@@ -722,16 +722,19 @@ def wechatpay_mp_get_info(
             u'trade_type = %s, product_id = %s' % (trade_type, product_id)
         )
         return ''
+
+    plan = ChargePlan.objects.get(pk=int(planid))
+
     data = {}
     data['appid'] = settings.WECHATPAY_MP_APPID
-    data['body'] = u'JSAPI支付测试'
+    data['body'] = plan.name
     data['mch_id'] = settings.WECHATPAY_MP_MCH_ID
     data['nonce_str'] = random_str(13)
     data['notify_url'] = settings.WECHATPAY_MP_NOTIFY_URL
     data['openid'] = openid
     data['out_trade_no'] = out_trade_no
     data['spbill_create_ip'] = client_ip
-    data['total_fee'] = 1
+    data['total_fee'] = plan.value
     data['trade_type'] = trade_type
     if product_id:
         data['product_id'] = product_id
@@ -783,27 +786,29 @@ def wechat_mp_pay_notify(request):
     log.debug(u'request.body = %s' % request.body)
 
     req_dict = xmltodict.parse(request.body)
-    log.debug('req_dict = %s' % req_dict)
     b = json.dumps(req_dict)
     req_dict = json.loads(b)['xml']
+    log.debug('req_dict = %s' % req_dict)
 
     transaction_id = req_dict['transaction_id']
     order_id = req_dict['out_trade_no']
 
     if not wechat_mp_pay_verify():
         return HttpResponse(dicttoxml(rsp_fail))
+    try:
+        cache_key = 'wechat_mp_pay_nid_' + hashlib.sha1(transaction_id).hexdigest()
+        nid = cache.get(cache_key)
+        if nid:
+            log.info(u'duplicated notify, drop it')
+            log.info(u'request.body = %s' % request.body)
+            return HttpResponse(dicttoxml(rsp_fail))
 
-    cache_key = 'wechat_mp_pay_nid_' + hashlib.sha1(transaction_id).hexdigest()
-    nid = cache.get(cache_key)
-    if nid:
-        log.info(u'duplicated notify, drop it')
-        log.info(u'request.body = %s' % request.body)
-        return HttpResponse(dicttoxml(rsp_fail))
-
-    if Charge.recharge(req_dict, provider='wechatmppay'):
-        cache.set(cache_key, order_id, 90000)  # notify_id 保存25小时。
-        log.info(u'wechatpay callback success')
-        return HttpResponse(dicttoxml({'return_code': 'SUCCESS'}))
+        if Charge.recharge(req_dict, provider='wechatmppay'):
+            cache.set(cache_key, order_id, 90000)  # notify_id 保存25小时。
+            log.info(u'wechatpay callback success')
+            return HttpResponse(dicttoxml({'return_code': 'SUCCESS'}))
+    except Exception, e:
+        log.error(e)
 
     log.info(u'not a valid callback, ignore')
     return HttpResponse(dicttoxml(rsp_fail))
