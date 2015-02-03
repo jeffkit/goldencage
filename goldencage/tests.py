@@ -704,3 +704,33 @@ class WechatpayTest(TestCase):
         )
         print prepay_id
         print errmsg
+
+    def test_wechat_mp_pay_verify(self):
+        from goldencage.views import wechat_mp_pay_verify
+        req_dict = {'openid': 'oFTfqjiGdMbL-6I04rqcU_PNziyg', 'trade_type': 'JSAPI', 'total_fee': '1', 'return_code': 'SUCCESS', 'nonce_str': 'lu5lr4a272iy5', 'is_subscribe': 'Y', 'fee_type': 'CNY', 'bank_type': 'CMB_CREDIT', 'mch_id': '1229194702', 'out_trade_no': '277250', 'transaction_id': '1003760227201502030012096138', 'time_end': '20150203223430', 'appid': 'wx02dce087b6279278', 'sign': 'FF3BBBE7E99D6043510F85FCFC322B08', 'cash_fee': '1', 'result_code': 'SUCCESS'}
+        wechat_mp_pay_verify(req_dict)
+
+        body = """
+        <xml><appid><![CDATA[wx02dce087b7279278]]></appid>
+<bank_type><![CDATA[CMB_CREDIT]]></bank_type>
+<cash_fee><![CDATA[1]]></cash_fee>
+<fee_type><![CDATA[CNY]]></fee_type>
+<is_subscribe><![CDATA[Y]]></is_subscribe>
+<mch_id><![CDATA[12213494702]]></mch_id>
+<nonce_str><![CDATA[lu5lr4a272iy5]]></nonce_str>
+<openid><![CDATA[oFTfqjiGdMbL-6I04rqcU_PNziyg]]></openid>
+<out_trade_no><![CDATA[277250]]></out_trade_no>
+<result_code><![CDATA[SUCCESS]]></result_code>
+<return_code><![CDATA[SUCCESS]]></return_code>
+<sign><![CDATA[FF3BBBE7E99D6043510F85FCFC322B08]]></sign>
+<time_end><![CDATA[20150203223430]]></time_end>
+<total_fee>1</total_fee>
+<trade_type><![CDATA[JSAPI]]></trade_type>
+<transaction_id><![CDATA[1003760227201502030012096138]]></transaction_id>
+</xml>
+        """
+        url = '/gc/wechatmpcb/'
+        cli = Client()
+        rsp = cli.post(url, data=body, content_type='application/xml')
+        print '+++++++++++++++++'
+        print rsp.content

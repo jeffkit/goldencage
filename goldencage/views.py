@@ -793,7 +793,7 @@ def wechat_mp_pay_notify(request):
     transaction_id = req_dict['transaction_id']
     order_id = req_dict['out_trade_no']
 
-    if not wechat_mp_pay_verify():
+    if not wechat_mp_pay_verify(req_dict):
         return HttpResponse(dicttoxml(rsp_fail))
     try:
         cache_key = 'wechat_mp_pay_nid_' + hashlib.sha1(transaction_id).hexdigest()
