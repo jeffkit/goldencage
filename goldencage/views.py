@@ -18,8 +18,9 @@ import requests
 import simplejson as json
 from random import Random
 import time
-# import xmltodict
 from xml.dom import minidom
+from dicttoxml import dicttoxml
+import xmltodict
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
@@ -735,12 +736,10 @@ def wechatpay_mp_get_info(
     if product_id:
         data['product_id'] = product_id
 
-    sign = _wechatpay_mp_sign(data)
+    sign = wechatpay_mp_sign(data)
     data['sign'] = sign
     log.debug('data = %s' % data)
-    import dicttoxml
-    import xmltodict
-    xml = dicttoxml.dicttoxml(data)
+    xml = dicttoxml(data)
     log.warning('xml = %s' % xml)
 
     url = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
@@ -757,7 +756,7 @@ def wechatpay_mp_get_info(
         return content['prepay_id'], None
 
 
-def _wechatpay_mp_sign(data):
+def wechatpay_mp_sign(data):
 
     string1 = convert_params_to_str_in_order(data)
     stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_MP_SECRET
@@ -768,3 +767,45 @@ def _wechatpay_mp_sign(data):
     log.debug(u'sign = %s' % sign_str)
 
     return sign_str
+
+
+@csrf_exempt
+def wechat_mp_pay_notify(request):
+    """ 微信公众号，
+    """
+    rsp_fail = {'return_code': 'FAIL'}
+    if request.method != 'POST':
+        logging.error('equest.method != "POST"')
+        return HttpResponse(dicttoxml(rsp_fail))
+
+    log.debug(u'request.body = %s' % request.body)
+
+    req_dict = xmltodict.parse(request.body)
+    log.debug('req_dict = %s' % req_dict)
+    b = json.dumps(req_dict)
+    req_dict = json.loads(b)['xml']
+
+    transaction_id = req_dict['transaction_id']
+    order_id = req_dict['out_trade_no']
+
+    if not wechat_mp_pay_verify():
+        return HttpResponse(dicttoxml(rsp_fail))
+
+    cache_key = 'wechat_mp_pay_nid_' + hashlib.sha1(transaction_id).hexdigest()
+    nid = cache.get(cache_key)
+    if nid:
+        log.info(u'duplicated notify, drop it')
+        log.info(u'request.body = %s' % request.body)
+        return HttpResponse(dicttoxml(rsp_fail))
+
+    if Charge.recharge(req_dict, provider='wechatmppay'):
+        cache.set(cache_key, order_id, 90000)  # notify_id 保存25小时。
+        log.info(u'wechatpay callback success')
+        return HttpResponse(dicttoxml({'return_code': 'SUCCESS'}))
+
+    log.info(u'not a valid callback, ignore')
+    return HttpResponse(dicttoxml(rsp_fail))
+
+
+def wechat_mp_pay_verify(data):
+    return True
