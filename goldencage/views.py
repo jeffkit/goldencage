@@ -439,7 +439,6 @@ def wechat_pay_gen_package(request):
 
 def convert_params_to_str_in_order(params, urlencode=False):
     param_list = sorted(params.iteritems(), key=lambda d: d[0])
-    # log.debug('param_list = %s' % param_list)
     tmp_str = u''
     for val in param_list:
         vall = u'%s' % val[1]
@@ -674,3 +673,98 @@ def _wechatpay_verify_notify(params):
     sign = md5.hexdigest().upper()
     log.debug(u'sign = %s' % sign)
     return wechat_sign == sign
+
+
+# def wechatpay_prepayid_params(planid, out_trade_no, client_ip, traceid):
+#     plan = ChargePlan.objects.get(pk=int(planid))
+#     package = _wechatpay_gen_package(
+#         package=None, body=plan.name, out_trade_no=out_trade_no,
+#         total_fee=plan.value, ip=client_ip)
+#     noncestr = random_str(13)
+#     timestamp = '%.f' % time.time()
+#     sha_param = {
+#         'appid': settings.WECHATPAY_APPID,
+#         'appkey': settings.WECHATPAY_APPKEY,
+#         'noncestr': noncestr,
+#         'package': package,
+#         'timestamp': timestamp,
+#         'traceid': traceid}
+#     app_signature = _wechatpay_app_signature(sha_param)
+#     log.debug(u'app_signature = %s' % app_signature)
+
+#     data = {'package': package}
+#     data['appid'] = settings.WECHATPAY_APPID
+#     data['noncestr'] = noncestr
+#     data['traceid'] = traceid
+#     data['timestamp'] = timestamp
+#     data['sign_method'] = 'sha1'
+#     data['app_signature'] = app_signature
+
+#     log.debug(u'rsp data = %s' % data)
+
+#     return data
+
+
+def wechatpay_mp_get_info(
+        planid, out_trade_no, client_ip, openid='',
+        trade_type='JSAPI', product_id=None):
+    """ 公众号支付
+        http://pay.weixin.qq.com/wiki/doc/api/index.php?chapter=9_1
+        openid, trade_type=JSAPI，此参数必传，用户在商户appid下的唯一标识
+        product_id, trade_type=NATIVE, 此参数必传。此id为二维码中包含的商品ID，商户自行定义
+    """
+    if trade_type == 'JSAPI' and not openid:
+        log.error(u'trade_type = %s, openid = %s' % (trade_type, openid))
+        return ''
+    if trade_type == 'NATIVE' and not product_id:
+        log.error(
+            u'trade_type = %s, product_id = %s' % (trade_type, product_id)
+        )
+        return ''
+    data = {}
+    data['appid'] = settings.WECHATPAY_MP_APPID
+    data['body'] = u'JSAPI支付测试'
+    data['mch_id'] = settings.WECHATPAY_MP_MCH_ID
+    data['nonce_str'] = random_str(13)
+    data['notify_url'] = settings.WECHATPAY_MP_NOTIFY_URL
+    data['openid'] = openid
+    data['out_trade_no'] = out_trade_no
+    data['spbill_create_ip'] = client_ip
+    data['total_fee'] = 1
+    data['trade_type'] = trade_type
+    if product_id:
+        data['product_id'] = product_id
+
+    sign = _wechatpay_mp_sign(data)
+    data['sign'] = sign
+    log.debug('data = %s' % data)
+    import dicttoxml
+    import xmltodict
+    xml = dicttoxml.dicttoxml(data)
+    log.warning('xml = %s' % xml)
+
+    url = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
+    resp = requests.post(url=url, data=xml)
+    log.debug('rsp = %s' % resp.content)
+    content = xmltodict.parse(resp.content)
+    log.debug('content = %s' % content)
+    b = json.dumps(content)
+    content = json.loads(b)['xml']
+    log.debug('content = %s' % content)
+    if content['return_code'] != 'SUCCESS':
+        return None, content['return_msg']
+    else:
+        return content['prepay_id'], None
+
+
+def _wechatpay_mp_sign(data):
+
+    string1 = convert_params_to_str_in_order(data)
+    stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_MP_SECRET
+    log.debug('stringSignTemp = %s' % stringSignTemp)
+    md5 = hashlib.md5()
+    md5.update(stringSignTemp)
+    sign_str = md5.hexdigest().upper()
+    log.debug(u'sign = %s' % sign_str)
+
+    return sign_str

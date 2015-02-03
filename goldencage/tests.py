@@ -692,3 +692,15 @@ class WechatpayTest(TestCase):
         rsp = cli.post(url, data=body, content_type='application/xml')
         print '+++++++++++++++++'
         print rsp.content
+
+    def test_wechatpay_mp_get_info(self):
+        print '+++++++++++++++++'
+        from goldencage.views import wechatpay_mp_get_info
+        prepay_id, errmsg = wechatpay_mp_get_info(
+            out_trade_no='123',
+            client_ip='127.0.0.1',
+            openid='oFTfqjmMVWKo7GM0vuFhpJHWDjh4',
+            trade_type='JSAPI'
+        )
+        print prepay_id
+        print errmsg
