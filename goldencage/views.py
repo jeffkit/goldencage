@@ -719,7 +719,7 @@ def wechatpay_mp_get_info(
     data['sign'] = sign
     log.debug('data = %s' % data)
     xml = dicttoxml(data)
-    log.warning('xml = %s' % xml)
+    log.debug('xml = %s' % xml)
 
     url = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
     try:
