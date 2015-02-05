@@ -722,7 +722,12 @@ def wechatpay_mp_get_info(
     log.warning('xml = %s' % xml)
 
     url = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
-    resp = requests.post(url=url, data=xml)
+    try:
+        resp = requests.post(url=url, data=xml, timeout=10)
+    except Exception, e:
+        log.warning(e)
+        return None, 'requests Exception'
+
     log.debug('rsp = %s' % resp.content)
     content = xmltodict.parse(resp.content)
     log.debug('content = %s' % content)
