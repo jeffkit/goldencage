@@ -13,4 +13,6 @@ urlpatterns = patterns(
         'wechat_pay_gen_package', name='wechat_pay_gen_package'),
     url(r'^wechatcb/$',
         'wechat_pay_notify', name='wechat_pay_notify'),
+    url(r'^wechatmpcb/$',
+        'wechat_mp_pay_notify', name='wechat_mp_pay_notify'),
 )

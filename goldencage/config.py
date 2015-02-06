@@ -32,9 +32,11 @@ APPWALLLOG_MAPPING = {
              'user_id': 'user',
              'product_id': 'ad',
              'product_name': 'ad',
-        },
+             },
 }
 
+# wechatpay 微信app sdk支付
+# wechatmppay 微信公众号sdk支付
 PAYMENT_MAPPING = {
     'alipay': {'account': 'buyer_id',
                'email': 'buyer_email',
@@ -49,16 +51,28 @@ PAYMENT_MAPPING = {
                   'transaction_id': 'transaction_id',
                   'order_id': 'out_trade_no',
                   'status': 'trade_state'
-                  }
+                  },
+    'wechatmppay': {
+        'account': 'openid',
+        'email': 'openid',
+        'value': 'total_fee',
+        'transaction_id': 'transaction_id',
+        'order_id': 'out_trade_no',
+        'status': 'result_code'
+    }
 }
 PAYMENT_FINISH = {
     'alipay': 'TRADE_FINISHED',
     'wechatpay': '0',
+    'wechatmppay': 'SUCCESS'
 }
 
+# 支付宝 1total_fee等于1蚊
+# 微信支付和微信公众号支付 1total_fee等于1分
 PAYMENT_SCALE = {
     'alipay': 100,
     'wechatpay': 1,
+    'wechatmppay': 1,
 }
 
 EXCHANGE_RATE = 25  # 一RMB对应金币数

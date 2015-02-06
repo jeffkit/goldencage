@@ -18,8 +18,9 @@ import requests
 import simplejson as json
 from random import Random
 import time
-# import xmltodict
 from xml.dom import minidom
+from dicttoxml import dicttoxml
+import xmltodict
 
 from goldencage.models import AppWallLog
 from goldencage.models import Charge
@@ -439,7 +440,6 @@ def wechat_pay_gen_package(request):
 
 def convert_params_to_str_in_order(params, urlencode=False):
     param_list = sorted(params.iteritems(), key=lambda d: d[0])
-    # log.debug('param_list = %s' % param_list)
     tmp_str = u''
     for val in param_list:
         vall = u'%s' % val[1]
@@ -674,3 +674,139 @@ def _wechatpay_verify_notify(params):
     sign = md5.hexdigest().upper()
     log.debug(u'sign = %s' % sign)
     return wechat_sign == sign
+
+
+###############################################################################
+###############################################################################
+###############################################################################
+# 公众号支付
+
+
+def wechatpay_mp_get_info(
+        planid, out_trade_no, client_ip, openid='',
+        trade_type='JSAPI', product_id=None):
+    """ 公众号支付
+        http://pay.weixin.qq.com/wiki/doc/api/index.php?chapter=9_1
+        openid, trade_type=JSAPI，此参数必传，用户在商户appid下的唯一标识
+        product_id, trade_type=NATIVE, 此参数必传。此id为二维码中包含的商品ID，商户自行定义
+    """
+    if trade_type == 'JSAPI' and not openid:
+        log.error(u'trade_type = %s, openid = %s' % (trade_type, openid))
+        return None, 'need openid'
+    if trade_type == 'NATIVE' and not product_id:
+        log.error(
+            u'trade_type = %s, product_id = %s' % (trade_type, product_id)
+        )
+        return None, 'need product_id'
+
+    plan = ChargePlan.objects.get(pk=int(planid))
+
+    data = {}
+    data['appid'] = settings.WECHATPAY_MP_APPID
+    data['body'] = plan.name
+    data['mch_id'] = settings.WECHATPAY_MP_MCH_ID
+    data['nonce_str'] = random_str(13)
+    data['notify_url'] = settings.WECHATPAY_MP_NOTIFY_URL
+    data['openid'] = openid
+    data['out_trade_no'] = out_trade_no
+    data['spbill_create_ip'] = client_ip
+    data['total_fee'] = plan.value
+    data['trade_type'] = trade_type
+    if product_id:
+        data['product_id'] = product_id
+
+    sign = wechatpay_mp_sign(data)
+    data['sign'] = sign
+    log.debug('data = %s' % data)
+    xml = dicttoxml(data)
+    log.debug('xml = %s' % xml)
+
+    url = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
+    try:
+        resp = requests.post(url=url, data=xml, timeout=10)
+    except Exception, e:
+        log.warning(e)
+        return None, 'requests Exception'
+
+    log.debug('rsp = %s' % resp.content)
+    content = xmltodict.parse(resp.content)
+    log.debug('content = %s' % content)
+    b = json.dumps(content)
+    content = json.loads(b)['xml']
+    log.debug('content = %s' % content)
+    if content['return_code'] != 'SUCCESS':
+        return None, content['return_msg']
+    if content['result_code'] != 'SUCCESS':
+        return None, content['err_code_des']
+    else:
+        return content['prepay_id'], None
+
+
+def wechatpay_mp_sign(data):
+
+    string1 = convert_params_to_str_in_order(data)
+    stringSignTemp = string1 + '&key=%s' % settings.WECHATPAY_MP_SECRET
+    log.debug('stringSignTemp = %s' % stringSignTemp)
+    md5 = hashlib.md5()
+    md5.update(stringSignTemp)
+    sign_str = md5.hexdigest().upper()
+    log.debug(u'sign = %s' % sign_str)
+    return sign_str
+
+
+@csrf_exempt
+def wechat_mp_pay_notify(request):
+    """ 微信公众号，
+    """
+    rsp_fail = {'return_code': 'FAIL'}
+    if request.method != 'POST':
+        log.debug(dicttoxml(rsp_fail))
+        logging.error('equest.method != "POST"')
+        return HttpResponse(dicttoxml(rsp_fail))
+
+    log.debug(u'request.body = %s' % request.body)
+
+    req_dict = xmltodict.parse(request.body)
+    b = json.dumps(req_dict)
+    req_dict = json.loads(b)['xml']
+    log.debug('req_dict = %s' % req_dict)
+
+    transaction_id = req_dict['transaction_id']
+    order_id = req_dict['out_trade_no']
+
+    if not wechat_mp_pay_verify(req_dict):
+        return HttpResponse(dicttoxml(rsp_fail))
+    try:
+        cache_key = 'wechat_mp_pay_nid_' + \
+            hashlib.sha1(transaction_id).hexdigest()
+        nid = cache.get(cache_key)
+        if nid:
+            log.info(u'duplicated notify, drop it')
+            log.info(u'request.body = %s' % request.body)
+            return HttpResponse(dicttoxml(rsp_fail))
+
+        if Charge.recharge(req_dict, provider='wechatmppay'):
+            cache.set(cache_key, order_id, 90000)  # notify_id 保存25小时。
+            log.info(u'wechatpay callback success')
+            return HttpResponse(dicttoxml({'return_code': 'SUCCESS'}))
+    except Exception, e:
+        log.error(e)
+
+    log.info(u'not a valid callback, ignore')
+    return HttpResponse(dicttoxml(rsp_fail))
+
+
+def wechat_mp_pay_verify(data):
+    sign = data['sign']
+    tmp_dict = {}
+    for key, value in data.iteritems():
+        if value and key != 'sign':
+            tmp_dict[key] = value
+    my_sign = wechatpay_mp_sign(tmp_dict)
+    log.debug('sign    = %s' % sign)
+    log.debug('my_sign = %s' % my_sign)
+
+    if sign == my_sign:
+        return True
+    else:
+        return False
