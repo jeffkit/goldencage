@@ -120,7 +120,7 @@ class CouponModelTest(TestCase):
         self.assertFalse(result)
 
     def test_valid_normal(self):
-        coupon = Coupon(name='test', cost=10, limit=1,
+        coupon = Coupon(name='test', cost=20, limit=1,
                         key='test')
         coupon.save()
         user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
@@ -134,7 +134,7 @@ class CouponModelTest(TestCase):
         result = coupon.validate('1233')
         self.assertEqual(result.status, 'DONE')
         apply_coupon.send.assert_called_with(sender=Coupon, instance=coupon,
-                                             cost=10, user=user)
+                                             cost=20, user=user)
 
 
 class OrderModelTest(TestCase):
