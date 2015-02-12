@@ -371,6 +371,7 @@ class Coupon(models.Model):
         exchange = exchange[0]
         exchange.status = 'DONE'
         exchange.exchange_user = user
+        exchange.cost = self.cost
         exchange.save()
         apply_coupon.send(sender=Coupon, instance=self,
                           cost=exchange.cost, user=exchange.user)
