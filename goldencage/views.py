@@ -201,6 +201,10 @@ def domob_callback_sign(request, private_key):
 
 
 def domob_callback_hdl(request, private_key, provider):
+    log.info(
+        'request.GET = {GET} provider = {provider}'.format(
+            GET=request.GET, provider=provider)
+    )
     signStr = domob_callback_sign(request, private_key)
     sign = request.GET.get('sign', '')
     if sign != signStr:
