@@ -39,6 +39,20 @@ APPWALLLOG_MAPPING = {
                  'product_id': 'ad',
                  'product_name': 'ad',
                  },
+    'domob_adr': {
+        'identity': 'orderid',
+        'cost': 'point',
+        'user_id': 'user',
+        'product_id': 'adid',
+        'product_name': 'ad',
+    },
+    'domob_ios': {
+        'identity': 'orderid',
+        'cost': 'point',
+        'user_id': 'user',
+        'product_id': 'adid',
+        'product_name': 'ad',
+    }
 }
 
 # wechatpay 微信app sdk支付
