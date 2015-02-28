@@ -107,8 +107,8 @@ class AppWallLog(models.Model):
                                          ('dianjoy_adr', u'点乐'),
                                          ('qumi', u'趣米iOS'),
                                          ('qumi_adr', u'趣米Android'),
-                                         ('domob_adr', u'多盟 Android'),
-                                         ('domob_ios', u'多盟 iOS'),
+                                         ('domob_adr', u'多盟Android'),
+                                         ('domob_ios', u'多盟iOS'),
                                          ))
     identity = models.CharField(max_length=100)
     cost = models.IntegerField()
