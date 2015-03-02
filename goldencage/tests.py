@@ -340,6 +340,62 @@ class AppWallCallbackTest(TestCase):
         self.assertEqual(rsp.content, 'OK, But duplicate item')
         self.assertFalse(appwalllog_done.called)
 
+    def create_domob_data(self, user):
+        ts = int(time.time())
+        return {'user': user.pk, 'orderid': 'orderid',
+                'pubid': 'pubid', 'ad': 'ad',
+                'adid': 112, 'device': 'device',
+                'channel': 1, 'price': '11',
+                'point': 10, 'ts': ts, 'pkg': 'pkg', 'action': 1,
+                'action_name': '签到-1',
+                }
+
+    def test_domob_adr(self):
+        appwalllog_done = Mock()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        params = self.create_domob_data(user)
+        param_list = sorted(params.iteritems(), key=lambda d: d[0])
+        sign = ''
+        for param in param_list:
+            sign += (str(param[0]) + '=' + str(param[1]))
+        sign += str(settings.GOLDENCAGE_DOMOB_PRIVATE_KEY_ANDROID)
+        m = hashlib.md5()
+        m.update(sign)
+        sign = m.hexdigest()
+        params['sign'] = sign
+        c = Client()
+        rsp = c.get(reverse('wall_cb', args=['domob_adr']), params)
+        self.assertEqual(rsp.status_code, 200)
+        appwalllog_done.assert_called()
+
+        rsp = c.get(reverse('wall_cb', args=['domob_adr']), params)
+        self.assertEqual(rsp.status_code, 200)
+        self.assertFalse(appwalllog_done.called)
+        self.assertEqual(rsp.content, 'OK, But Duplicated item')
+
+        params['sign'] = 'haha'
+        rsp = c.get(reverse('wall_cb', args=['domob_adr']), params)
+        self.assertEqual(rsp.status_code, 403)
+        self.assertFalse(appwalllog_done.called)
+
+    def test_domob_ios(self):
+        appwalllog_done = Mock()
+        user = User.objects.create_user('jeff', 'jeff@toraysoft.com', '123')
+        params = self.create_domob_data(user)
+        param_list = sorted(params.iteritems(), key=lambda d: d[0])
+        sign = ''
+        for param in param_list:
+            sign += (str(param[0]) + '=' + str(param[1]))
+        sign += str(settings.GOLDENCAGE_DOMOB_PRIVATE_KEY_IOS)
+        m = hashlib.md5()
+        m.update(sign)
+        sign = m.hexdigest()
+        params['sign'] = sign
+        c = Client()
+        rsp = c.get(reverse('wall_cb', args=['domob_adr']), params)
+        self.assertEqual(rsp.status_code, 200)
+        appwalllog_done.assert_called()
+
 
 @skipIfCustomUser
 class AlipayCallbackTest(TestCase):

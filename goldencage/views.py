@@ -185,6 +185,53 @@ def qumi_callback_android(request):
         return HttpResponse('OK, But Duplicated item')
 
 
+def domob_callback_sign(request, private_key):
+    params = {}
+    for k, v in request.GET.iteritems():
+        if k != 'sign':
+            params[k] = v
+    param_list = sorted(params.iteritems(), key=lambda d: d[0])
+    sign = ''
+    for param in param_list:
+        sign += (str(param[0]) + '=' + str(param[1]))
+    sign += str(private_key)
+    m = hashlib.md5()
+    m.update(sign)
+    return m.hexdigest()
+
+
+def domob_callback_hdl(request, private_key, provider):
+    log.info(
+        'request.GET = {GET} provider = {provider}'.format(
+            GET=request.GET, provider=provider)
+    )
+    signStr = domob_callback_sign(request, private_key)
+    sign = request.GET.get('sign', '')
+    if sign != signStr:
+        return HttpResponseForbidden()
+    else:
+        if AppWallLog.log(request.GET, provider=provider):
+            return HttpResponse('OK')
+        else:
+            return HttpResponse('OK, But Duplicated item')
+
+
+def domob_callback_android(request):
+    return domob_callback_hdl(
+        request,
+        settings.GOLDENCAGE_DOMOB_PRIVATE_KEY_ANDROID,
+        'domob_adr',
+    )
+
+
+def domob_callback_ios(request):
+    return domob_callback_hdl(
+        request,
+        settings.GOLDENCAGE_DOMOB_PRIVATE_KEY_IOS,
+        'domob_ios',
+    )
+
+
 def appwall_callback(request, provider):
     return {'waps': waps_callback,
             'youmi_ios': youmi_callback_ios,
@@ -192,6 +239,8 @@ def appwall_callback(request, provider):
             'dianjoy_adr': dianjoy_callback_adr,
             'qumi': qumi_callback,
             'qumi_adr': qumi_callback_android,
+            'domob_adr': domob_callback_android,
+            'domob_ios': domob_callback_ios,
             }[provider](request)
 
 alipay_public_key = config.ALIPAY_PUBLIC_KEY
