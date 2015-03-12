@@ -433,7 +433,7 @@ def wechat_pay_get_access_token():
         'secret': settings.WECHATPAY_SECRET
     }
     log.debug('params = %s' % params)
-    rsp = requests.get(WECHATPAY_ACCESS_TOKEN_URL, params=params)
+    rsp = requests.get(WECHATPAY_ACCESS_TOKEN_URL, params=params, verify=False)
     content = json.loads(rsp.content)
     errcode = content.get('errcode')
     if errcode:
@@ -625,7 +625,8 @@ def wechatpay_get_info(
         'content-type': 'application/json'
     }
     post_data = json.dumps(data)
-    rsp = requests.post(url, params=params, data=post_data, headers=headers)
+    rsp = requests.post(url, params=params, data=post_data,
+                        headers=headers, verify=False)
     content = json.loads(rsp.content)
     if content['errcode'] != 0:
         log.error(content['errmsg'])
