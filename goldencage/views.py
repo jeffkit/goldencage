@@ -40,7 +40,7 @@ def rsp(data=None):
         data = {}
     ret = {'errcode': 0, 'errmsg': 'ok', 'data': data}
     ret = json.dumps(ret)
-    return HttpResponse(ret)
+    return HttpResponse(ret, content_type='application/json')
 
 
 def error_rsp(code, msg, data=None):
@@ -48,7 +48,10 @@ def error_rsp(code, msg, data=None):
         data = {}
     ret = {'errcode': code, 'errmsg': msg, 'data': data}
     ret = json.dumps(ret)
-    return HttpResponse({'errcode': code, 'errmsg': msg, 'data': data})
+    return HttpResponse(
+        {'errcode': code, 'errmsg': msg, 'data': data},
+        content_type='application/json'
+    )
 
 
 waps_ips = ['219.234.85.238', '219.234.85.223',
