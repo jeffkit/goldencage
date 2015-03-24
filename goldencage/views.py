@@ -359,13 +359,20 @@ def alipay_sign(request):
         logging.error('equest.method != "POST"')
         return error_rsp(5099, 'error')
 
-    log.debug('request.POST = %s' % request.POST)
-    words = request.POST.get('words')
+    log.info('request.POST = %s' % request.POST)
+    log.info('request.body = %s' % request.body)
+
+    try:
+        content = json.loads(request.body)
+    except:
+        content = request.POST
+
+    words = content.get('words')
     if not words:
         logging.error('if not words')
         return error_rsp(5099, 'error')
 
-    sign_type = request.POST.get('sign_type')
+    sign_type = content.get('sign_type')
     if not sign_type:
         sign_type = 'RSA'
 
