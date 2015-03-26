@@ -849,7 +849,9 @@ def wechat_mp_pay_notify(request):
         if Charge.recharge(req_dict, provider='wechatmppay'):
             cache.set(cache_key, order_id, 90000)  # notify_id 保存25小时。
             log.info(u'wechatpay callback success')
-            return HttpResponse(dicttoxml({'return_code': 'SUCCESS'}))
+            return HttpResponse(dicttoxml(
+                {'return_code': 'SUCCESS', 'return_msg': 'OK'}
+            ))
     except Exception, e:
         log.error(e)
 
