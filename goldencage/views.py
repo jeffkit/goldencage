@@ -32,7 +32,7 @@ from goldencage.models import ChargePlan
 from wechat.official import WxApplication, WxTextResponse, WxResponse
 
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger('django')
 
 
 def rsp(data=None):
@@ -767,7 +767,8 @@ def wechatpay_mp_get_info(
     data['mch_id'] = settings.WECHATPAY_MP_MCH_ID
     data['nonce_str'] = random_str(13)
     data['notify_url'] = settings.WECHATPAY_MP_NOTIFY_URL
-    data['openid'] = openid
+    if openid:
+        data['openid'] = openid
     data['out_trade_no'] = out_trade_no
     data['spbill_create_ip'] = client_ip
     data['total_fee'] = plan.value
