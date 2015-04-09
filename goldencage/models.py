@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 
 task_done = Signal(providing_args=['cost', 'user'])
 appwalllog_done = Signal(providing_args=['cost', 'user'])
-payment_done = Signal(providing_args=['cost', 'user'])
+payment_done = Signal(providing_args=['cost', 'user', 'plan', 'order'])
 apply_coupon = Signal(providing_args=['instance', 'cost', 'user'])
 
 
@@ -248,7 +248,7 @@ class Charge(models.Model):
 
         def dispatch_signal(cost, user, plan, order):
             payment_done.send(sender=cls, cost=cost,
-                              user=user)
+                              user=user, plan=plan, order=order)
             if plan and plan.coupon > 0:
                 try:
                     task = Task.objects.get(key='__recharge')

@@ -1,4 +1,4 @@
-#encoding=utf-8
+# encoding=utf-8
 
 from django.contrib import admin
 
@@ -59,8 +59,12 @@ class ExchangeAdmin(admin.ModelAdmin):
     list_select_related = []
 
 
+class ChargePlanAdmin(admin.ModelAdmin):
+    list_display = ('name', 'value', 'cost', 'coupon', 'valid', 'code')
+
+
 admin.site.register(Task, admin.ModelAdmin)
-admin.site.register(ChargePlan, admin.ModelAdmin)
+admin.site.register(ChargePlan, ChargePlanAdmin)
 admin.site.register(TaskLog, TaskLogAdmin)
 admin.site.register(Charge, ChargeAdmin)
 admin.site.register(Order, OrderAdmin)

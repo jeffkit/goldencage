@@ -410,6 +410,7 @@ class AlipayCallbackTest(TestCase):
     def create_payment_data(self):
         order = Order(user=self.user, plan=self.plan, value=3000)
         order.save()
+        self.order = order
         return {'notify_time': '', 'notify_type': 'trade_status_sync',
                 'notify_id': 'csdfo834jr', 'sign_type': 'RSA',
                 'sign': 'no sign this time',
@@ -443,7 +444,8 @@ class AlipayCallbackTest(TestCase):
         self.assertEqual('success', rsp.content)
         cost = int(round(config.EXCHANGE_RATE * 30))
         payment_done.send.assert_called_with(sender=Charge,
-                                             cost=cost, user=self.user)
+                                             cost=cost, user=self.user,
+                                             plan=self.plan, order=self.order)
         task_done.send.assert_called_with(sender=Task, cost=50,
                                           user=self.user)
 
@@ -479,7 +481,8 @@ class AlipayCallbackTest(TestCase):
         rsp = c.get(reverse('alipay_cb'), data)
         self.assertEqual('success', rsp.content)
         payment_done.send.assert_called_with(sender=Charge, cost=750,
-                                             user=self.user)
+                                             user=self.user,
+                                             plan=self.plan, order=self.order)
 
         cache.get = Mock(return_value='123')
         payment_done.send = Mock()
@@ -753,6 +756,7 @@ class WechatpayTest(TestCase):
         print '+++++++++++++++++'
         from goldencage.views import wechatpay_mp_get_info
         prepay_id, errmsg = wechatpay_mp_get_info(
+            self.plan.id,
             out_trade_no='123',
             client_ip='127.0.0.1',
             openid='oFTfqjmMVWKo7GM0vuFhpJHWDjh4',
@@ -763,7 +767,8 @@ class WechatpayTest(TestCase):
 
     def test_wechat_mp_pay_verify(self):
         from goldencage.views import wechat_mp_pay_verify
-        req_dict = {'openid': 'oFTfqjiGdMbL-6I04rqcU_PNziyg', 'trade_type': 'JSAPI', 'total_fee': '1', 'return_code': 'SUCCESS', 'nonce_str': 'lu5lr4a272iy5', 'is_subscribe': 'Y', 'fee_type': 'CNY', 'bank_type': 'CMB_CREDIT', 'mch_id': '1229194702', 'out_trade_no': '277250', 'transaction_id': '1003760227201502030012096138', 'time_end': '20150203223430', 'appid': 'wx02dce087b6279278', 'sign': 'FF3BBBE7E99D6043510F85FCFC322B08', 'cash_fee': '1', 'result_code': 'SUCCESS'}
+        req_dict = {'openid': 'oFTfqjiGdMbL-6I04rqcU_PNziyg', 'trade_type': 'JSAPI', 'total_fee': '1', 'return_code': 'SUCCESS', 'nonce_str': 'lu5lr4a272iy5', 'is_subscribe': 'Y', 'fee_type': 'CNY', 'bank_type': 'CMB_CREDIT', 'mch_id':
+                    '1229194702', 'out_trade_no': '277250', 'transaction_id': '1003760227201502030012096138', 'time_end': '20150203223430', 'appid': 'wx02dce087b6279278', 'sign': 'FF3BBBE7E99D6043510F85FCFC322B08', 'cash_fee': '1', 'result_code': 'SUCCESS'}
         wechat_mp_pay_verify(req_dict)
 
         body = """

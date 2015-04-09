@@ -22,6 +22,8 @@ setup(
         'wechat',
         'pycrypto',
         'jsonfield',
+        'pytz',
+        'simplejson',
         'dicttoxml',
         'xmltodict',
     ]

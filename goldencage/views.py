@@ -32,7 +32,7 @@ from goldencage.models import ChargePlan
 from wechat.official import WxApplication, WxTextResponse, WxResponse
 
 import logging
-log = logging.getLogger(__name__)
+log = logging.getLogger('django')
 
 
 def rsp(data=None):
@@ -40,7 +40,7 @@ def rsp(data=None):
         data = {}
     ret = {'errcode': 0, 'errmsg': 'ok', 'data': data}
     ret = json.dumps(ret)
-    return HttpResponse(ret)
+    return HttpResponse(ret, content_type='application/json')
 
 
 def error_rsp(code, msg, data=None):
@@ -48,7 +48,10 @@ def error_rsp(code, msg, data=None):
         data = {}
     ret = {'errcode': code, 'errmsg': msg, 'data': data}
     ret = json.dumps(ret)
-    return HttpResponse({'errcode': code, 'errmsg': msg, 'data': data})
+    return HttpResponse(
+        {'errcode': code, 'errmsg': msg, 'data': data},
+        content_type='application/json'
+    )
 
 
 waps_ips = ['219.234.85.238', '219.234.85.223',
@@ -356,13 +359,20 @@ def alipay_sign(request):
         logging.error('equest.method != "POST"')
         return error_rsp(5099, 'error')
 
-    log.debug('request.POST = %s' % request.POST)
-    words = request.POST.get('words')
+    log.info('request.POST = %s' % request.POST)
+    log.info('request.body = %s' % request.body)
+
+    try:
+        content = json.loads(request.body)
+    except:
+        content = request.POST
+
+    words = content.get('words')
     if not words:
         logging.error('if not words')
         return error_rsp(5099, 'error')
 
-    sign_type = request.POST.get('sign_type')
+    sign_type = content.get('sign_type')
     if not sign_type:
         sign_type = 'RSA'
 
@@ -433,7 +443,7 @@ def wechat_pay_get_access_token():
         'secret': settings.WECHATPAY_SECRET
     }
     log.debug('params = %s' % params)
-    rsp = requests.get(WECHATPAY_ACCESS_TOKEN_URL, params=params)
+    rsp = requests.get(WECHATPAY_ACCESS_TOKEN_URL, params=params, verify=False)
     content = json.loads(rsp.content)
     errcode = content.get('errcode')
     if errcode:
@@ -625,7 +635,8 @@ def wechatpay_get_info(
         'content-type': 'application/json'
     }
     post_data = json.dumps(data)
-    rsp = requests.post(url, params=params, data=post_data, headers=headers)
+    rsp = requests.post(url, params=params, data=post_data,
+                        headers=headers, verify=False)
     content = json.loads(rsp.content)
     if content['errcode'] != 0:
         log.error(content['errmsg'])
@@ -756,7 +767,8 @@ def wechatpay_mp_get_info(
     data['mch_id'] = settings.WECHATPAY_MP_MCH_ID
     data['nonce_str'] = random_str(13)
     data['notify_url'] = settings.WECHATPAY_MP_NOTIFY_URL
-    data['openid'] = openid
+    if openid:
+        data['openid'] = openid
     data['out_trade_no'] = out_trade_no
     data['spbill_create_ip'] = client_ip
     data['total_fee'] = plan.value
@@ -837,7 +849,9 @@ def wechat_mp_pay_notify(request):
         if Charge.recharge(req_dict, provider='wechatmppay'):
             cache.set(cache_key, order_id, 90000)  # notify_id 保存25小时。
             log.info(u'wechatpay callback success')
-            return HttpResponse(dicttoxml({'return_code': 'SUCCESS'}))
+            return HttpResponse(dicttoxml(
+                {'return_code': 'SUCCESS', 'return_msg': 'OK'}
+            ))
     except Exception, e:
         log.error(e)
 
