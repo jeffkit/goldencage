@@ -784,7 +784,7 @@ def wechatpay_mp_get_info(
 
     url = 'https://api.mch.weixin.qq.com/pay/unifiedorder'
     try:
-        resp = requests.post(url=url, data=xml, timeout=10)
+        resp = requests.post(url=url, data=xml, timeout=10, verify=False)
     except Exception, e:
         log.warning(e)
         return None, 'requests Exception'
